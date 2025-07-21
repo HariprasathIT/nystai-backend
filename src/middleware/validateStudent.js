@@ -2,9 +2,15 @@ import { body } from 'express-validator';
 import pool from '../config/db.js';
 
 export const validateStudent = [
-    // Personal Info
-    body('name').trim().notEmpty().withMessage('Name is required'),
-    body('last_name').trim().notEmpty().withMessage('Last name is required'),
+
+    body('name')
+        .trim().notEmpty().withMessage('Name is required')
+        .isAlpha().withMessage('Name must contain only letters'),
+
+    body('last_name')
+        .trim().notEmpty().withMessage('Last name is required')
+        .isAlpha().withMessage('Last name must contain only letters'),
+
     body('dob').notEmpty().withMessage('Date of birth is required'),
     body('gender').notEmpty().withMessage('Gender is required'),
 
@@ -61,7 +67,13 @@ export const validateStudent = [
         }),
 
     body('address').trim().notEmpty().withMessage('Address is required'),
-    body('pincode').isPostalCode('IN').withMessage('Invalid pincode'),
+
+    body('pincode')
+        .trim()
+        .notEmpty().withMessage('Pincode is required')
+        .matches(/^[1-9][0-9]{5}$/).withMessage('Pincode must be a 6-digit number starting from 1 to 9')
+        .isLength({ min: 6, max: 6 }).withMessage('Pincode must be exactly 6 digits'),
+
     body('state').trim().notEmpty().withMessage('State is required'),
 
     // Course Info
