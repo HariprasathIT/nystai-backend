@@ -3,6 +3,7 @@ import multer from 'multer';
 // Memory storage
 const storage = multer.memoryStorage();
 
+
 // File type check
 const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = [
@@ -32,10 +33,15 @@ const upload = multer({
   limits: { fileSize: 2 * 1024 * 1024 } // 2MB in bytes
 });
 
-export default upload.fields([
+// Export the configured fields middleware as a FUNCTION
+export const uploadFields = upload.fields([
   { name: 'passport_photo', maxCount: 1 },
   { name: 'pan_card', maxCount: 1 },
   { name: 'aadhar_card', maxCount: 1 },
   { name: 'sslc_marksheet', maxCount: 1 }
 ]);
 
+// Alternative: Accept any field (for mixed form data)
+const uploadAny = upload.any();
+
+export default uploadAny;

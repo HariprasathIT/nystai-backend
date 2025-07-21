@@ -1,63 +1,7 @@
-// import { put } from '@vercel/blob';
-// import db from "../config/db.js";
-
-// export const uploadImage = async (req, res, next) => {
-//     try {
-//         if (!req.files || Object.keys(req.files).length === 0) {
-//             return res.status(400).json({ error: 'No files uploaded' });
-//         }
-
-//         const uploadedUrls = {};
-//         const fields = ['passport_photo', 'pan_card', 'aadhar_card', 'sslc_marksheet'];
-
-//         for (const field of fields) {
-//             const file = req.files[field]?.[0];
-
-//             if (!file) {
-//                 return res.status(400).json({ error: `${field} is missing` });
-//             }
-
-//             const blob = await put(`studentproofs/${file.originalname}`, file.buffer, {
-//                 access: 'public',
-//                 token: process.env.VERCEL_BLOB_RW_TOKEN,
-//                 addRandomSuffix: true
-//             });
-
-//             uploadedUrls[field] = blob.url;
-//         }
-
-//         // Insert into PostgreSQL
-//         const result = await db.query(
-//             `INSERT INTO student_proof_documents 
-//       (passport_photo_url, pan_card_url, aadhar_card_url, sslc_marksheet_url)
-//       VALUES ($1, $2, $3, $4) RETURNING *`,
-//             [
-//                 uploadedUrls.passport_photo,
-//                 uploadedUrls.pan_card,
-//                 uploadedUrls.aadhar_card,
-//                 uploadedUrls.sslc_marksheet
-//             ]
-//         );
-
-//         res.status(201).json({ message: 'Documents uploaded successfully', data: result.rows[0] });
-//     } catch (error) {
-//         // if (error.message.includes('Video files are not allowed')) {
-//         //     return res.status(400).json({ error: 'Video files are not allowed' });
-//         // }
-
-//         // if (error.message.includes('File too large upload below 2MB')) {
-//         //     return res.status(413).json({ error: 'File size should be below 2MB' });
-//         // }
-//         console.error(error);
-//         res.status(500).json({ error: 'Failed to upload documents', detail: error.message });
-//     }
-// };
-
-
 import db from "../config/db.js";
 import { put } from '@vercel/blob';
 import asyncHandler from 'express-async-handler';
-import { generateStudentRegisterNumber } from '../utils/generateStudentID.js'; // ✅ import it
+import { generateStudentRegisterNumber } from '../utils/generateStudentID.js';
 
 export const insertStudentWithProof = asyncHandler(async (req, res) => {
     const client = await db.connect();
@@ -107,9 +51,9 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
         );
         const studentId = personalResult.rows[0].student_id;
 
-        
+
         const studentRegisterNumber = await generateStudentRegisterNumber(course_enrolled, client);
-        
+
 
         // 2. Insert into studentcoursedetails
         await client.query(
@@ -125,7 +69,7 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
                 course_enrolled,
                 batch,
                 tutor,
-                studentRegisterNumber 
+                studentRegisterNumber
             ]
         );
 
@@ -150,8 +94,8 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
         );
 
         await client.query('COMMIT');
-        res.status(201).json({ 
-            message: 'Student inserted successfully', 
+        res.status(201).json({
+            message: 'Student inserted successfully',
             student_id: studentId,
             student_register_number: studentRegisterNumber
         });
@@ -164,3 +108,34 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
         client.release();
     }
 });
+
+
+export const getAllStudents = async (req, res, next) => {
+    try {
+        const result = await db.query(`
+    SELECT 
+    spi.*,
+    scd.department_stream,
+    scd.course_duration,
+    scd.join_date,
+    scd.end_date,
+    scd.course_enrolled,
+    scd.batch,
+    scd.tutor,
+    scd.studentregisternumber,
+    spd.passport_photo_url,
+    spd.pan_card_url,
+    spd.aadhar_card_url,
+    spd.sslc_marksheet_url,
+    suq.certificate_status,
+    suq.student_qr_url
+      FROM studentspersonalinformation spi
+      LEFT JOIN studentcoursedetails scd ON spi.student_id = scd.student_id
+      LEFT JOIN student_proof_documents spd ON spi.student_id = spd.student_id
+      LEFT JOIN studentsuniqueqrcode suq ON spi.student_id = suq.student_id;
+    `);
+        res.status(200).json(result.rows);
+    } catch (err) {
+        next(err);
+    }
+};

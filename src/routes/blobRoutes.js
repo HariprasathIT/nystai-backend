@@ -1,30 +1,16 @@
-
-// import express from 'express';
-// import upload from '../middleware/uploadMiddleware.js';
-// import { uploadImage } from '../controllers/blobController.js';
-
-// const router = express.Router();
-
-// router.post('/upload', upload, uploadImage);
-
-
-// export default router;
-
-
-
-
-// src/routes/blobRoutes.js
 import express from 'express';
-import upload from '../middleware/uploadMiddleware.js';
-import { insertStudentWithProof } from '../controllers/blobController.js';
-import { validateStudent } from '../middleware/validateStudent.js'; // ✅ Import your validation middleware
+import { uploadFields } from '../middleware/uploadMiddleware.js';
+import { getAllStudents, insertStudentWithProof } from '../controllers/blobController.js';
+import { validateStudent } from '../middleware/validateStudent.js';
 import { validationResult } from 'express-validator';
+import { updateStudentWithProof } from '../controllers/studentEditController.js';
 
 const router = express.Router();
 
-
-// router.post('/insert-student', validateStudent, upload, insertStudentWithProof);
-router.post('/insert-student', upload, validateStudent,
+//  Insert student route with multiple file uploads
+router.post('/insert-student',
+    uploadFields,           //  handle passport_photo, pan_card, aadhar_card, sslc_marksheet
+    validateStudent,        //  express-validator middlewares
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -32,12 +18,13 @@ router.post('/insert-student', upload, validateStudent,
         }
         next();
     },
-    insertStudentWithProof
+    insertStudentWithProof   //  Final controller to save student and upload files
 );
 
+//  Get all students
+router.get('/get-all-students', getAllStudents);
+
+//  Update student with file uploads
+router.put('/update-student/:student_id', uploadFields, updateStudentWithProof);
+
 export default router;
-
-
-
-
-
