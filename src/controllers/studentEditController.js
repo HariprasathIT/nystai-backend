@@ -2,7 +2,8 @@ import db from '../config/db.js';
 import { put } from '@vercel/blob';
 import generateAndUploadQR from '../utils/generateAndUploadQR.js';
 
-
+// This function updates a student's details along with their proof documents
+// It handles file uploads, updates personal information, course details, and generates a QR code if
 export const updateStudentWithProof = async (req, res) => {
     const client = await db.connect();
 
@@ -32,7 +33,7 @@ export const updateStudentWithProof = async (req, res) => {
             course_enrolled,
             batch,
             tutor,
-            certificate_status // ✅ New field expected
+            certificate_status //  New field expected
         } = req.body || {};
 
         const files = req.files;
@@ -118,7 +119,7 @@ export const updateStudentWithProof = async (req, res) => {
             );
         }
 
-        // ✅ QR CODE: Only generate if certificate is "completed"
+        //  QR CODE: Only generate if certificate is "completed"
         if (certificate_status === 'completed') {
             // Get register number
             const regResult = await client.query(
@@ -133,9 +134,10 @@ export const updateStudentWithProof = async (req, res) => {
 
                 // Update QR URL
                 await client.query(
-                    `UPDATE studentsuniqueqrcode SET qrcode_url = $1 WHERE student_id = $2`,
-                    [qrUrl, student_id]
+                    'UPDATE studentsuniqueqrcode SET certificate_status = $1, student_qr_url = $2 WHERE student_id = $3',
+                    ['completed', qrUrl, student_id]
                 );
+
             }
         }
 
@@ -154,5 +156,4 @@ export const updateStudentWithProof = async (req, res) => {
         client.release();
     }
 };
-
 

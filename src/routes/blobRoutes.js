@@ -1,9 +1,10 @@
 import express from 'express';
 import { uploadFields } from '../middleware/uploadMiddleware.js';
-import { getAllStudents, insertStudentWithProof } from '../controllers/blobController.js';
+import { deleteStudent, getAllStudents, getStudentById, insertStudentWithProof } from '../controllers/blobController.js';
 import { validateStudent } from '../middleware/validateStudent.js';
 import { validationResult } from 'express-validator';
 import { updateStudentWithProof } from '../controllers/studentEditController.js';
+import { validateUpdateStudentCourse } from '../middleware/updatestudentmiddleware.js';
 
 const router = express.Router();
 
@@ -25,6 +26,12 @@ router.post('/insert-student',
 router.get('/get-all-students', getAllStudents);
 
 //  Update student with file uploads
-router.put('/update-student/:student_id', uploadFields, updateStudentWithProof);
+router.put('/update-student/:student_id', uploadFields,validateUpdateStudentCourse, updateStudentWithProof);
+
+// Delete student route
+router.delete('/students/:id', deleteStudent);
+
+// Get student by ID
+router.get('/single-student/:student_id', getStudentById);
 
 export default router;
