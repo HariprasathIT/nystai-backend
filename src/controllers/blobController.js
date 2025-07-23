@@ -36,50 +36,75 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
         } = req.body;
 
         const files = req.files;
-
         const requiredDocs = ['passport_photo', 'pan_card', 'aadhar_card', 'sslc_marksheet'];
+
+        //  Check required files
         for (const doc of requiredDocs) {
-            if (!files[doc]) {
+            if (!files[doc] || !files[doc][0]) {
                 return res.status(400).json({ error: `${doc} is missing` });
             }
         }
 
+        //  Begin transaction
         await client.query('BEGIN');
 
-        const uploadedUrls = {};
-        for (const field of requiredDocs) {
-            const file = files[field][0];
-            const blob = await put(`studentproofs/${file.originalname}`, file.buffer, {
-                access: 'public',
-                token: process.env.VERCEL_BLOB_RW_TOKEN,
-                addRandomSuffix: true
-            });
-            uploadedUrls[field] = blob.url;
-        }
+        //  Upload files in parallel
+        const uploadResults = await Promise.all(
+            requiredDocs.map(async (field) => {
+                const file = files[field][0];
 
-        // 1. Insert into studentspersonalinformation
+                const blob = await put(`studentproofs/${file.originalname}`, file.buffer, {
+                    access: 'public',
+                    token: process.env.VERCEL_BLOB_RW_TOKEN,
+                    addRandomSuffix: true
+                });
+
+                return { field, url: blob.url };
+            })
+        );
+
+        //  Map uploaded URLs
+        const uploadedUrls = {};
+        uploadResults.forEach(({ field, url }) => {
+            uploadedUrls[field] = url;
+        });
+
+        //  Insert into studentspersonalinformation
         const personalResult = await client.query(
             `INSERT INTO studentspersonalinformation 
-            (name, last_name, dob, gender, email, phone, alt_phone, aadhar_number, pan_number, address, pincode, state, department, course, year_of_passed, experience)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-            RETURNING student_id`,
+      (name, last_name, dob, gender, email, phone, alt_phone, aadhar_number, pan_number, address, pincode, state, department, course, year_of_passed, experience)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+      RETURNING student_id`,
             [
-                name, last_name, dob, gender, email, phone, alt_phone,
-                aadhar_number, pan_number, address, pincode, state,
-                department, course, year_of_passed, experience
+                name,
+                last_name,
+                dob,
+                gender,
+                email,
+                phone,
+                alt_phone,
+                aadhar_number,
+                pan_number,
+                address,
+                pincode,
+                state,
+                department,
+                course,
+                year_of_passed,
+                experience
             ]
         );
+
         const studentId = personalResult.rows[0].student_id;
 
-
+        //  Generate register number
         const studentRegisterNumber = await generateStudentRegisterNumber(course_enrolled, client);
 
-
-        // 2. Insert into studentcoursedetails
+        //  Insert into studentcoursedetails
         await client.query(
             `INSERT INTO studentcoursedetails 
-            (student_id, department_stream, course_duration, join_date, end_date, course_enrolled, batch, tutor, studentregisternumber)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      (student_id, department_stream, course_duration, join_date, end_date, course_enrolled, batch, tutor, studentregisternumber)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
             [
                 studentId,
                 department_stream,
@@ -93,11 +118,11 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
             ]
         );
 
-        // 3. Insert into student_proof_documents
+        //  Insert into student_proof_documents
         await client.query(
             `INSERT INTO student_proof_documents 
-            (student_id, passport_photo_url, pan_card_url, aadhar_card_url, sslc_marksheet_url)
-            VALUES ($1, $2, $3, $4, $5)`,
+      (student_id, passport_photo_url, pan_card_url, aadhar_card_url, sslc_marksheet_url)
+      VALUES ($1, $2, $3, $4, $5)`,
             [
                 studentId,
                 uploadedUrls.passport_photo,
@@ -107,12 +132,13 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
             ]
         );
 
-        // 4. Insert into studentsuniqueqrcode
+        //  Insert into studentsuniqueqrcode
         await client.query(
             `INSERT INTO studentsuniqueqrcode (student_id) VALUES ($1)`,
             [studentId]
         );
 
+        //  Commit and respond
         await client.query('COMMIT');
         res.status(201).json({
             message: 'Student inserted successfully',

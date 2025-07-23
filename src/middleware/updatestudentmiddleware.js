@@ -6,17 +6,35 @@ export const validateUpdateStudentCourse = [
   body('name')
     .trim()
     .notEmpty().withMessage('Name is required')
+    .isLength({ min: 4, max: 30 }).withMessage('Name must be between 4 and 30 characters')
     .isAlpha().withMessage('Name must contain only letters'),
 
   body('last_name')
     .trim()
     .notEmpty().withMessage('Last name is required')
+    .isLength({ min: 4, max: 30 }).withMessage('Last name must be between 4 and 30 characters')
     .isAlpha().withMessage('Last name must contain only letters'),
 
   body('dob')
     .trim()
     .notEmpty().withMessage('Date of birth is required')
-    .isDate().withMessage('Date of birth must be a valid date'),
+    .isDate().withMessage('Date of birth must be a valid date')
+    .custom((value) => {
+      const dob = new Date(value);
+      const today = new Date();
+      const age = today.getFullYear() - dob.getFullYear();
+      const monthDiff = today.getMonth() - dob.getMonth();
+      const dayDiff = today.getDate() - dob.getDate();
+
+      const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+
+      if (actualAge < 21) {
+        throw new Error('Student must be at least 21 years old');
+      }
+
+      return true;
+    }),
+
 
   body('gender')
     .trim()
@@ -26,39 +44,57 @@ export const validateUpdateStudentCourse = [
   body('email')
     .trim()
     .notEmpty().withMessage('Email is required')
-    .isEmail().withMessage('Invalid email')
+    .isEmail().withMessage('Invalid email address')
+    .matches(/@(?:gmail\.com|yahoo\.com|outlook\.com|.+\.org)$/)
+    .withMessage('Only gmail.com, yahoo.com, outlook.com, or .org emails are allowed')
     .custom(async (value, { req }) => {
       const { rows } = await pool.query(
         'SELECT email FROM studentspersonalinformation WHERE email = $1 AND student_id != $2',
         [value, req.params.student_id]
       );
-      if (rows.length > 0) throw new Error('Email already exists');
+      if (rows.length > 0) {
+        throw new Error('Email already exists');
+      }
       return true;
     }),
 
   body('phone')
     .trim()
     .notEmpty().withMessage('Phone number is required')
-    .optional({ checkFalsy: true })
-    .isMobilePhone().withMessage('Invalid phone')
+    .matches(/^[6-9]\d{9}$/).withMessage('Invalid phone number, Phone number must be 10 digits, starting with 6-9')
     .custom(async (value, { req }) => {
       const { rows } = await pool.query(
         'SELECT phone FROM studentspersonalinformation WHERE phone = $1 AND student_id != $2',
         [value, req.params.student_id]
       );
-      if (rows.length > 0) throw new Error('Phone already exists');
+      if (rows.length > 0) {
+        throw new Error('Phone already exists');
+      }
       return true;
     }),
+
 
   body('alt_phone')
     .trim()
     .notEmpty().withMessage('Alternate phone number is required')
-    .isMobilePhone('en-IN').withMessage('Invalid alternate phone number'),
+    .isMobilePhone('en-IN').withMessage('Invalid alternate phone number, must be 10 digits, starting with 6-9')
+    .custom(async (value, { req }) => {
+      const { rows } = await pool.query(
+        'SELECT alt_phone FROM studentspersonalinformation WHERE alt_phone = $1 AND student_id != $2',
+        [value, req.params.student_id]
+      );
+      if (rows.length > 0) {
+        throw new Error('Alternate phone number already exists');
+      }
+      return true;
+    }),
+
 
   body('aadhar_number')
     .trim()
     .notEmpty().withMessage('Aadhar number is required')
     .isLength({ min: 12, max: 12 }).withMessage('Aadhar must be 12 digits')
+    .matches(/^\d{12}$/).withMessage('Aadhar must contain only 12 numeric digits')
     .custom(async (value, { req }) => {
       const { rows } = await pool.query(
         'SELECT aadhar_number FROM studentspersonalinformation WHERE aadhar_number = $1 AND student_id != $2',
@@ -77,7 +113,8 @@ export const validateUpdateStudentCourse = [
   body('pincode')
     .trim()
     .notEmpty().withMessage('Pincode is required')
-    .matches(/^[1-9][0-9]{5}$/).withMessage('Pincode must be valid'),
+    .matches(/^[1-9][0-9]{5}$/).withMessage('Pincode must be a 6-digit number starting from 1 to 9')
+    .isLength({ min: 6, max: 6 }).withMessage('Pincode must be exactly 6 digits'),
 
   body('address')
     .trim()
@@ -148,10 +185,5 @@ export const validateUpdateStudentCourse = [
     next();
   }
 ];
-
-
-
-
-
 
 

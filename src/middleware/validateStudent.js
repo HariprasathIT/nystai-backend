@@ -6,16 +6,35 @@ export const validateStudent = [
     body('name')
         .trim()
         .notEmpty().withMessage('Name is required')
+        .isLength({ min: 4, max: 30 }).withMessage('Name must be between 4 and 30 characters')
         .isAlpha().withMessage('Name must contain only letters'),
 
     body('last_name')
         .trim()
         .notEmpty().withMessage('Last name is required')
+        .isLength({ min: 4, max: 30 }).withMessage('Last name must be between 4 and 30 characters')
         .isAlpha().withMessage('Last name must contain only letters'),
 
-    body('dob').trim()
+    body('dob')
+        .trim()
+        .notEmpty().withMessage('Date of birth is required')
         .isDate().withMessage('Date of birth must be a valid date')
-        .notEmpty().withMessage('Date of birth is required'),
+        .custom((value) => {
+            const dob = new Date(value);
+            const today = new Date();
+            const age = today.getFullYear() - dob.getFullYear();
+            const monthDiff = today.getMonth() - dob.getMonth();
+            const dayDiff = today.getDate() - dob.getDate();
+
+            const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+
+            if (actualAge < 21) {
+                throw new Error('Student must be at least 21 years old');
+            }
+
+            return true;
+        }),
+
 
     body('gender')
         .trim()
@@ -27,8 +46,13 @@ export const validateStudent = [
         .trim()
         .notEmpty().withMessage('Email is required')
         .isEmail().withMessage('Invalid email address')
+        .matches(/@(?:gmail\.com|yahoo\.com|outlook\.com|.+\.org)$/)
+        .withMessage('Only gmail.com, yahoo.com, outlook.com, or .org emails are allowed')
         .custom(async (value) => {
-            const { rows } = await pool.query('SELECT email FROM studentspersonalinformation WHERE email = $1', [value]);
+            const { rows } = await pool.query(
+                'SELECT email FROM studentspersonalinformation WHERE email = $1',
+                [value]
+            );
             if (rows.length > 0) {
                 throw new Error('Email already registered');
             }
@@ -38,31 +62,38 @@ export const validateStudent = [
     body('phone')
         .trim()
         .notEmpty().withMessage('Phone number is required')
-        .isMobilePhone().withMessage('Invalid phone number')
+        .matches(/^[6-9]\d{9}$/).withMessage('Invalid phone number,Phone Number must be 10 digits, starting with 6-9')
         .custom(async (value) => {
-            const { rows } = await pool.query('SELECT phone FROM studentspersonalinformation WHERE phone = $1', [value]);
+            const { rows } = await pool.query(
+                'SELECT phone FROM studentspersonalinformation WHERE phone = $1',
+                [value]
+            );
             if (rows.length > 0) {
                 throw new Error('Phone number already registered');
             }
             return true;
         }),
 
+
     body('alt_phone')
         .trim()
-        .notEmpty().withMessage('Alternate phone number is required')
-        .optional()
-        .isMobilePhone().withMessage('Invalid alternate phone number')
+        .matches(/^[6-9]\d{9}$/).withMessage('Invalid alternate phone number, must be 10 digits, starting with 6-9')
         .custom(async (value) => {
-            const { rows } = await pool.query('SELECT alt_phone FROM studentspersonalinformation WHERE alt_phone = $1', [value]);
+            const { rows } = await pool.query(
+                'SELECT alt_phone FROM studentspersonalinformation WHERE alt_phone = $1',
+                [value]
+            );
             if (rows.length > 0) {
                 throw new Error('Alternate phone already registered');
             }
             return true;
         }),
 
+
     body('aadhar_number')
         .trim()
         .notEmpty().withMessage('Aadhar number is required')
+        .matches(/^\d{12}$/).withMessage('Aadhar must contain only 12 numeric digits')
         .isLength({ min: 12, max: 12 }).withMessage('Aadhar must be 12 digits')
         .custom(async (value) => {
             const { rows } = await pool.query('SELECT aadhar_number FROM studentspersonalinformation WHERE aadhar_number = $1', [value]);
