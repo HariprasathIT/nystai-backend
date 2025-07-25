@@ -6,6 +6,8 @@ import cors from 'cors';
 
 import blobRoutes from './src/routes/blobRoutes.js';
 import errorHandler from './src/middleware/errorHandler.js';
+import authRoutes from './src/routes/authRoutes.js';
+import Nystaicoursesroutes from './src/routes/Nystaicoursesroutes.js';
 
 const app = express();
 app.use(cors());
@@ -13,6 +15,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/', blobRoutes);
+app.use('/superadmin', authRoutes);
+app.use('/Allcourses', Nystaicoursesroutes);
+
 
 app.use(errorHandler)
 
