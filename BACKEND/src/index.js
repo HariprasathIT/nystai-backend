@@ -4,11 +4,11 @@ import cors from 'cors';
 // import { fileURLToPath } from 'url';
 // import './src/config/db.js';
 
-import blobRoutes from './src/routes/blobRoutes.js';
-import errorHandler from './src/middleware/errorHandler.js';
-import authRoutes from './src/routes/authRoutes.js';
-import Nystaicoursesroutes from './src/routes/Nystaicoursesroutes.js';
-import pricingPlanRoutes from './src/routes/Pricingroutes.js';
+import blobRoutes from './routes/blobRoutes.js';
+import errorHandler from './middleware/errorHandler.js';
+import authRoutes from './routes/authRoutes.js';
+import Nystaicoursesroutes from './routes/Nystaicoursesroutes.js';
+import pricingPlanRoutes from './routes/Pricingroutes.js';
 
 const app = express();
 app.use(cors({
