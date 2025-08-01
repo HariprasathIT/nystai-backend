@@ -1,0 +1,31 @@
+# Common
+node_modules/
+.env
+.vscode/
+dist/
+*.log
+.DS_Store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# Frontend builds
+frontend/build/
+frontend/.next/
+frontend/.cache/
+frontend/.turbo/
+
+# Backend builds (if you ever use build tools like TypeScript)
+backend/dist/
+backend/build/
