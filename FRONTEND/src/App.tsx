@@ -18,6 +18,8 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import { Toaster } from 'react-hot-toast';
+import AllCourses from "./components/COURSES/AllCourses";
+import Courses1 from "./components/COURSES/Coursesdetails";
 
 export default function App() {
   return (
@@ -40,6 +42,8 @@ export default function App() {
             <Route index path="/" element={<Home />} />
 
             {/* Others Page */}
+            <Route path="/Courses" element={<AllCourses />} />
+            <Route path="/course1" element={<Courses1 />} />
             <Route path="/profile" element={<UserProfiles />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/blank" element={<Blank />} />

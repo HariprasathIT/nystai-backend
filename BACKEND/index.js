@@ -12,7 +12,7 @@ import pricingPlanRoutes from './src/routes/Pricingroutes.js';
 
 const app = express();
 app.use(cors({
-  origin: ["http://localhost:3000", "https://your-frontend.vercel.app"], // allow localhost & vercel
+  origin: ["http://localhost:5173", "https://your-frontend.vercel.app"], // allow localhost & vercel
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 }));

@@ -22,7 +22,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { icon: <GridIcon />, name: "Overview", path: "/" },
-  { icon: <CalenderIcon />, name: "Courses", path: "/profile" },
+  { icon: <CalenderIcon />, name: "Courses", path: "/Courses" },
   { icon: <UserCircleIcon />, name: "Student List", path: "/basic-tables" },
   { icon: <CalenderIcon />, name: "Course Pricing", path: "/calendar1" },
   { icon: <UserCircleIcon />, name: "Contact", path: "/profile1" },
