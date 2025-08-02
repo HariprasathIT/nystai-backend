@@ -21,6 +21,8 @@ import { Toaster } from 'react-hot-toast';
 import AllCourses from "./components/COURSES/AllCourses";
 import Courses1 from "./components/COURSES/Coursesdetails";
 
+
+
 export default function App() {
   return (
     <>
@@ -28,13 +30,12 @@ export default function App() {
         position="bottom-right"
         toastOptions={{
           style: {
-            zIndex: 9999, // Make sure it's on top
+            zIndex: 9999,
           },
         }}
       />
 
       <Router>
-
         <ScrollToTop />
         <Routes>
           {/* Dashboard Layout */}

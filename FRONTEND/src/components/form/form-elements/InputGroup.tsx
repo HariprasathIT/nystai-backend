@@ -81,7 +81,7 @@ export default function InputGroup() {
     data.append("sslc_marksheet", documents.sslc_marksheet);
 
     try {
-      const response = await fetch("http://localhost:5000/insert-student", {
+      const response = await fetch("https://nystai-backend.onrender.com/insert-student", {
         method: "POST",
         body: data,
       });
