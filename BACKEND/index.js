@@ -9,6 +9,7 @@ import errorHandler from './src/middleware/errorHandler.js';
 import authRoutes from './src/routes/authRoutes.js';
 import Nystaicoursesroutes from './src/routes/Nystaicoursesroutes.js';
 import pricingPlanRoutes from './src/routes/Pricingroutes.js';
+import tutorRoutes from './src/routes/tutorRoutes.js';
 
 const app = express();
 app.use(cors({
@@ -23,6 +24,7 @@ app.use('/', blobRoutes);
 app.use('/AdminorTutor', authRoutes);
 app.use('/Allcourses', Nystaicoursesroutes);
 app.use('/pricing-plans', pricingPlanRoutes);
+app.use('/NystaiTutors', tutorRoutes)
 
 
 app.use(errorHandler)

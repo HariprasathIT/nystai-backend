@@ -27,7 +27,7 @@ router.post('/insert-student',
 router.get('/get-all-students', getAllStudents);
 
 //  Update student with file uploads
-router.put('/update-student/:student_id', uploadFields,validateUpdateStudentCourse, updateStudentWithProof);
+router.put('/update-student/:student_id', uploadFields, validateUpdateStudentCourse, updateStudentWithProof);
 
 // Delete student route
 router.delete('/students/:id', deleteStudent);
