@@ -1,10 +1,19 @@
 import { Navigate } from "react-router";
+import { ReactNode } from "react";
 
-const ProtectedRoute = ({ children, allowedRoles }: { children: JSX.Element, allowedRoles: string[] }) => {
-  const role = localStorage.getItem('userRole');
 
-  if (!role || !allowedRoles.includes(role)) {
-    return <Navigate to="/signin" />;
+
+interface ProtectedRouteProps {
+  children: ReactNode;
+  allowedRoles: string[];
+}
+
+const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
+ const role = localStorage.getItem("userRole");
+
+
+  if (!allowedRoles.includes(role || "")) {
+    return <Navigate to="/unauthorized" />;
   }
 
   return children;

@@ -20,7 +20,7 @@ app.use(express.json()); // for JSON data
 app.use(express.urlencoded({ extended: true })); //for form data
 
 app.use('/', blobRoutes);
-app.use('/superadmin', authRoutes);
+app.use('/AdminorTutor', authRoutes);
 app.use('/Allcourses', Nystaicoursesroutes);
 app.use('/pricing-plans', pricingPlanRoutes);
 
