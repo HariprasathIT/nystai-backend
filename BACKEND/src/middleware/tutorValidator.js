@@ -6,9 +6,13 @@ const tutorValidator = [
 
     body("gender").notEmpty().withMessage("Gender is required"),
 
-    body("first_name").notEmpty().withMessage("First name is required"),
+    body("first_name").notEmpty().withMessage("First name is required")
+        .isLength({ min: 4, max: 30 }).withMessage('First name must be between 4 and 30 characters')
+        .isAlpha().withMessage('Name must contain only letters'),
 
-    body("last_name").notEmpty().withMessage("Last name is required"),
+    body("last_name").notEmpty().withMessage("Last name is required")
+        .isLength({ min: 4, max: 30 }).withMessage('Last name must be between 4 and 30 characters')
+        .isAlpha().withMessage('Name must contain only letters'), 
 
     body("email")
         .notEmpty()
@@ -36,6 +40,7 @@ const tutorValidator = [
 
     body("phone")
         .notEmpty()
+        .matches(/^[6-9]\d{9}$/).withMessage('Invalid phone number, Phone number must be 10 digits, starting with 6-9')
         .withMessage("Phone number is required")
         .bail()
         .isMobilePhone("en-IN") // Adjust locale if needed

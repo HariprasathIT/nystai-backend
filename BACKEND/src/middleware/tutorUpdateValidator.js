@@ -6,8 +6,12 @@ const validDomains = ["gmail.com", "yahoo.com", "outlook.com"];
 export const tutorUpdateValidator = [
     body("dob").notEmpty().withMessage("Date of birth is required"),
     body("gender").notEmpty().withMessage("Gender is required"),
-    body("first_name").notEmpty().withMessage("First name is required"),
-    body("last_name").notEmpty().withMessage("Last name is required"),
+    body("first_name").notEmpty().withMessage("First name is required")
+        .isLength({ min: 4, max: 30 }).withMessage('First name must be between 4 and 30 characters')
+        .isAlpha().withMessage('Name must contain only letters'),
+    body("last_name").notEmpty().withMessage("Last name is required")
+        .isLength({ min: 4, max: 30 }).withMessage('Last name must be between 4 and 30 characters')
+        .isAlpha().withMessage('Name must contain only letters'), ,
     body("email")
         .notEmpty().withMessage("Email is required")
         .isEmail().withMessage("Invalid email format")
@@ -29,7 +33,7 @@ export const tutorUpdateValidator = [
     body("phone")
         .notEmpty().withMessage("Phone number is required")
         .isMobilePhone("en-IN").withMessage("Invalid phone number")
-        .matches(/^\d{10}$/).withMessage("Phone number must be exactly 10 digits")
+        .matches(/^[6-9]\d{9}$/).withMessage('Invalid phone number, Phone number must be 10 digits, starting with 6-9')
         .custom(async (value, { req }) => {
             const { id } = req.params;
             const result = await db.query("SELECT * FROM nystai_tutors WHERE phone = $1 AND tutor_id != $2", [value, id]);
