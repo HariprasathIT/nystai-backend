@@ -1,5 +1,5 @@
 import express from 'express';
-import { addPricingPlan, deletePricingPlan, getAllPricingPlans, updatePricingPlan } from '../controllers/pricingPlanController.js';
+import { addPricingPlan, deletePricingPlan, getAllPricingPlans, getsingleplan, updatePricingPlan } from '../controllers/pricingPlanController.js';
 import { validatePricingPlan } from '../middleware/pricingPlanValidation.js';
 import multer from 'multer';
 const upload = multer();
@@ -18,5 +18,8 @@ router.get('/all-pricing-plans', getAllPricingPlans);
 router.put('/update-pricing-plan/:id', upload.none(), updatePricingPlan);
 
 router.delete('/delete-pricing-plan/:id', deletePricingPlan);
+
+router.get("/single-plan/:id", getsingleplan);
+
 
 export default router;

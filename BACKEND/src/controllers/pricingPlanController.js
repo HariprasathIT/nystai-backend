@@ -173,3 +173,25 @@ export const deletePricingPlan = async (req, res, next) => {
     next(err);
   }
 };
+
+
+// Getting a pricing plan
+// This function Gets a specific pricing plan based on its ID
+export const getsingleplan = async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    const result = await db.query("SELECT * FROM nystai_pricing_plans WHERE id = $1", [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
+
+    res.status(200).json({
+      message: "Plan fetched successfully",
+      plan: result.rows[0],
+    });
+  } catch (error) {
+    next(error);
+  }
+};
