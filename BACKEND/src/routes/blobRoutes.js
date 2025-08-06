@@ -1,9 +1,8 @@
 import express from 'express';
 import { uploadFields, validateUploadedFiles } from '../middleware/uploadMiddleware.js';
-import { deleteStudent, getAllStudents, getStudentById, insertStudentWithProof } from '../controllers/blobController.js';
+import { deleteStudent, getAllStudents, getStudentById, insertStudentWithProof, updateStudentWithProof } from '../controllers/blobController.js';
 import { validateStudent } from '../middleware/validateStudent.js';
 import { validationResult } from 'express-validator';
-import { updateStudentWithProof } from '../controllers/studentEditController.js';
 import { validateUpdateStudentCourse } from '../middleware/updatestudentmiddleware.js';
 
 const router = express.Router();

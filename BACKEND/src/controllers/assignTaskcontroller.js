@@ -77,3 +77,60 @@ export const getSingleAssignedTask = async (req, res, next) => {
     res.status(500).json({ error: "Failed to fetch task" });
   }
 };
+
+
+// This Function is for Updating a "Assignment Status"
+// Default : "pending"
+// Update : "Completed"
+export const markTaskAsDone = async (req, res) => {
+  const { task_id, student_id } = req.params;
+
+  try {
+    // Step 1: Insert into submission table (if not already submitted)
+    await pool.query(
+      `INSERT INTO student_task_submissions (task_id, student_id) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [task_id, student_id]
+    );
+
+    // Step 2: Get the batch of the task
+    const taskResult = await pool.query(
+      `SELECT batch FROM student_batch_tasks WHERE task_id = $1`,
+      [task_id]
+    );
+    if (taskResult.rowCount === 0) return res.status(404).send("Task not found");
+
+    const batch = taskResult.rows[0].batch;
+
+    // Step 3: Count how many students in that batch
+    const studentCountRes = await pool.query(
+      `SELECT COUNT(*) FROM studentcoursedetails WHERE batch = $1`,
+      [batch]
+    );
+    const totalStudents = parseInt(studentCountRes.rows[0].count);
+
+    // Step 4: Count submissions for this task
+    const submissionCountRes = await pool.query(
+      `SELECT COUNT(*) FROM student_task_submissions WHERE task_id = $1`,
+      [task_id]
+    );
+    const submittedCount = parseInt(submissionCountRes.rows[0].count);
+
+    // Step 5: If all submitted → update task as completed
+    if (submittedCount === totalStudents) {
+      await pool.query(
+        `UPDATE student_batch_tasks SET mark_as_done = 'completed' WHERE task_id = $1`,
+        [task_id]
+      );
+    }
+
+    // Response
+    res.send(`
+      <h2 style="font-family: Arial; color: green;">✅ Marked as Done!</h2>
+      <p>Thank you for submitting your task.</p>
+    `);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Something went wrong.");
+  }
+};
