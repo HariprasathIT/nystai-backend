@@ -2,7 +2,7 @@ import pool from "../config/db.js";
 import { sendBulkEmails } from "../utils/sendEmail.js";
 
 
-// This Function is for Create Task
+// This Function is for Creating a Task and Emailing Students
 export const assignTaskToBatch = async (req, res, next) => {
   const { batch, course, task_title, task_description, due_date } = req.body;
 
@@ -16,30 +16,35 @@ export const assignTaskToBatch = async (req, res, next) => {
 
     const task = result.rows[0];
 
-    // 2. Get Student Emails of the Batch
+    // 2. Get Student Emails & IDs of the Batch
     const emailQuery = await pool.query(
-      `SELECT spi.email
+      `SELECT spi.email, spi.student_id
        FROM studentcoursedetails scd
        JOIN studentspersonalinformation spi ON spi.student_id = scd.student_id
        WHERE scd.batch = $1`,
       [batch]
     );
 
-    const emails = emailQuery.rows.map(row => row.email);
+    const students = emailQuery.rows;
 
-    // 3. Send Emails
-    await sendBulkEmails(emails, `📚 New Task Assigned: ${task_title}`, {
-      batch,
-      course,
-      task_title,
-      task_description,
-      due_date,
-      viewLink: `https://yourdomain.com/assignment/${task.task_id}`, // optional
-      doneLink: `https://yourdomain.com/assignment/${task.task_id}/done` // optional
+    // 3. Send Emails to Each Student Individually
+    const sendPromises = students.map(({ email, student_id }) => {
+      return sendBulkEmails(email, `📚 New Task Assigned: ${task_title}`, {
+        batch,
+        course,
+        task_title,
+        task_description,
+        due_date,
+        viewLink: `https://yourdomain.com/assignment/${task.task_id}`,
+        doneLink: `https://nystai-backend.onrender.com/Students-Tasks/mark-task-done/${task.task_id}/${student_id}`
+      });
     });
+
+    await Promise.all(sendPromises);
 
     res.status(200).json({ message: "Task assigned and emails sent", task });
   } catch (err) {
+    console.error(err);
     next(err);
   }
 };
