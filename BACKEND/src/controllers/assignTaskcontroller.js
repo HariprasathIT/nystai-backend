@@ -1,6 +1,8 @@
 import pool from "../config/db.js";
 import { sendBulkEmails } from "../utils/sendEmail.js";
 
+
+// This Function is for Create Task
 export const assignTaskToBatch = async (req, res, next) => {
   const { batch, course, task_title, task_description, due_date } = req.body;
 
@@ -39,5 +41,39 @@ export const assignTaskToBatch = async (req, res, next) => {
     res.status(200).json({ message: "Task assigned and emails sent", task });
   } catch (err) {
     next(err);
+  }
+};
+
+
+// This Function is for Get Api 
+export const getAllAssignedTasks = async (req, res, next) => {
+  try {
+    const result = await pool.query("SELECT * FROM student_batch_tasks ORDER BY assigned_at DESC");
+    res.status(200).json({ tasks: result.rows });
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    res.status(500).json({ error: "Failed to fetch tasks" });
+  }
+};
+
+
+// This Function is for Get Single task
+export const getSingleAssignedTask = async (req, res, next) => {
+  const { task_id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM student_batch_tasks WHERE task_id = $1",
+      [task_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.status(200).json({ task: result.rows[0] });
+  } catch (error) {
+    console.error("Error fetching task:", error);
+    res.status(500).json({ error: "Failed to fetch task" });
   }
 };

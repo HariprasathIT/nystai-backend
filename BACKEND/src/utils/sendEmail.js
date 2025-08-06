@@ -31,11 +31,11 @@ import { dirname } from "path";
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-    service: "gmail", // or "outlook" if you're using Outlook
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
 });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -43,17 +43,17 @@ const __dirname = dirname(__filename);
 
 
 export const sendBulkEmails = async (to, subject, data) => {
-    const html = `
+  const html = `
  <div style="font-family: Arial, sans-serif; background-color: #fcf9f3; padding: 20px; color: #333;">
   <img src="cid:nystailogo@cid" alt="Nystai Logo" style="height: 60px; margin-bottom: 20px;" />
 
   <h2 style="font-size: 22px; color: #1f3e23;">📘 Course: ${data.course}</h2>
-  <h1 style="font-size: 26px; color: #f6c200;">📝 New Assignment: ${data.task_title}</h1>
+  <h1 style="font-size: 26px; color: #ED1C24;">📝 New Assignment: ${data.task_title}</h1>
   <h3 style="font-size: 20px;">📅 Due by: ${new Date(data.due_date).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-    })}</h3>
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  })}</h3>
 
   <p style="line-height: 1.6; font-size: 16px; margin-top: 20px;">
     ${data.task_description}
@@ -91,18 +91,18 @@ export const sendBulkEmails = async (to, subject, data) => {
 </div>
   `;
 
-    await transporter.sendMail({
-        from: `"Nystai Institute" <${process.env.EMAIL_USER}>`,
-        to,
-        subject,
-        html,
-        attachments: [
-            {
-                filename: "logo.png",
-                path: path.resolve(__dirname, "../assets/logo.png"),
-                cid: "nystailogo@cid",
-            },
-        ],
-    });
+  await transporter.sendMail({
+    from: `"Nystai Institute" <${process.env.EMAIL_USER}>`,
+    to,
+    subject,
+    html,
+    attachments: [
+      {
+        filename: "logo.png",
+        path: path.resolve(__dirname, "../assets/logo.png"),
+        cid: "nystailogo@cid",
+      },
+    ],
+  });
 };
 
