@@ -1,7 +1,7 @@
 import { body } from 'express-validator';
 
 export const validatePricingPlan = [
-  body('course_name').trim().notEmpty().withMessage('Course name is required'),
+  body('plan_name').trim().notEmpty().withMessage('Course name is required'),
   body('price').trim().notEmpty().withMessage('Price is required'),
 
   // Optional points but can be required if you want

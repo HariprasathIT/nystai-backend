@@ -17,7 +17,7 @@ export const addPricingPlan = async (req, res, next) => {
     }
 
     const {
-        course_name,
+        plan_name,
         price,
         point_1,
         point_2,
@@ -29,10 +29,10 @@ export const addPricingPlan = async (req, res, next) => {
     } = req.body;
 
     try {
-        // Check for duplicate course_name + price
+        // Check for duplicate plan_name + price
         const existing = await db.query(
-            `SELECT * FROM nystai_pricing_plans WHERE course_name = $1 AND price = $2`,
-            [course_name, price]
+            `SELECT * FROM nystai_pricing_plans WHERE plan_name = $1 AND price = $2`,
+            [plan_name, price]
         );
 
         if (existing.rows.length > 0) {
@@ -41,11 +41,11 @@ export const addPricingPlan = async (req, res, next) => {
 
         const result = await db.query(
             `INSERT INTO nystai_pricing_plans
-             (course_name, price, point_1, point_2, point_3, point_4, point_5, point_6, point_7)
+             (plan_name, price, point_1, point_2, point_3, point_4, point_5, point_6, point_7)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
              RETURNING *`,
             [
-                course_name,
+                plan_name,
                 price,
                 point_1,
                 point_2,
@@ -89,7 +89,7 @@ export const getAllPricingPlans = async (req, res, next) => {
 export const updatePricingPlan = async (req, res, next) => {
     const { id } = req.params;
     const {
-        course_name,
+        plan_name,
         price,
         point_1,
         point_2,
@@ -109,7 +109,7 @@ export const updatePricingPlan = async (req, res, next) => {
 
         const result = await db.query(
             `UPDATE nystai_pricing_plans SET
-             course_name = $1,
+             plan_name = $1,
              price = $2,
              point_1 = $3,
              point_2 = $4,
@@ -121,7 +121,7 @@ export const updatePricingPlan = async (req, res, next) => {
              WHERE id = $10
              RETURNING *`,
             [
-                course_name,
+                plan_name,
                 price,
                 point_1,
                 point_2,
