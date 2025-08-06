@@ -65,7 +65,7 @@ export const sendBulkEmails = async (to, subject, data) => {
       View Assignment
     </button>
   </a>
-  <a href="http://localhost:5000/Students-Tasks/mark-task-done/${task.task_id}/${student_id}" style="display: inline-block;">
+  <a href="https://nystai-backend.onrender.com/Students-Tasks/mark-task-done/${task.task_id}/${student_id}" style="display: inline-block;">
     <button style="background: #f6c200; color: #1f3e23; border: none; padding: 12px 24px; font-size: 16px; border-radius: 5px;">
       Mark as Done
     </button>
