@@ -36,7 +36,7 @@ export const assignTaskToBatch = async (req, res, next) => {
         task_description,
         due_date,
         viewLink: `https://yourdomain.com/assignment/${task.task_id}`,
-        doneLink: `http://localhost:5000/Students-Tasks/mark-task-done/${task.task_id}/${student_id}`
+        doneLink: `https://nystai-backend.onrender.com/Students-Tasks/mark-task-done/${task.task_id}/${student_id}`
       });
     });
 
