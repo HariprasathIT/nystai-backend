@@ -18,7 +18,13 @@ export const validateStudent = [
     body('dob')
         .trim()
         .notEmpty().withMessage('Date of birth is required')
-        .isDate().withMessage('Date of birth must be a valid date')
+        .custom((value) => {
+            const parsedDate = Date.parse(value);
+            if (isNaN(parsedDate)) {
+                throw new Error('Date of birth must be a valid date');
+            }
+            return true;
+        })
         .custom((value) => {
             const dob = new Date(value);
             const today = new Date();
@@ -34,6 +40,7 @@ export const validateStudent = [
 
             return true;
         }),
+
 
 
     body('gender')

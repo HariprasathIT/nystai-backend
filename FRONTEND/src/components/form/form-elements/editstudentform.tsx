@@ -10,8 +10,124 @@ import { useState, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import Upload from "../../../icons/Upload icon.png";
 import Uploadafter from "../../../icons/OIP.webp";
+import { useParams } from "react-router-dom";
+import axios from "axios";
 
-export default function InputGroup() {
+
+type StudentFormData = {
+  name: string;
+  last_name: string;
+  dob: string;
+  gender: string;
+  email: string;
+  phone: string;
+  alt_phone: string;
+  aadhar_number: string;
+  pan_number: string;
+  address: string;
+  pincode: string;
+  state: string;
+  department: string;
+  course: string;
+  year_of_passed: string;
+  experience: string;
+  department_stream: string;
+  course_duration: string;
+  join_date: string;
+  end_date: string;
+  course_enrolled: string;
+  batch: string;
+  tutor: string;
+};
+
+
+export default function StudentEditForm() {
+
+  const [formData, setFormData] = useState<StudentFormData>({
+    name: "",
+    last_name: "",
+    dob: "",
+    gender: "",
+    email: "",
+    phone: "",
+    alt_phone: "",
+    aadhar_number: "",
+    pan_number: "",
+    address: "",
+    pincode: "",
+    state: "",
+    department: "",
+    course: "",
+    year_of_passed: "",
+    experience: "",
+    department_stream: "",
+    course_duration: "",
+    join_date: "",
+    end_date: "",
+    course_enrolled: "",
+    batch: "",
+    tutor: ""
+  });
+
+
+  const { id } = useParams();
+
+  useEffect(() => {
+    const fetchStudent = async () => {
+      try {
+        const res = await axios.get(
+          `https://nystai-backend.onrender.com/single-student/${id}`
+        );
+        const student = res.data.data; // ✅ Fix this line
+
+        setFormData({
+          name: student.name ?? "",
+          last_name: student.last_name ?? "",
+          dob: student.dob ?? "",
+          gender: student.gender ?? "",
+          email: student.email ?? "",
+          phone: student.phone ?? "",
+          alt_phone: student.alt_phone ?? "",
+          aadhar_number: student.aadhar_number ?? "",
+          pan_number: student.pan_number ?? "",
+          address: student.address ?? "",
+          pincode: student.pincode ?? "",
+          state: student.state ?? "",
+          department: student.department ?? "",
+          course: student.course ?? "",
+          year_of_passed: student.year_of_passed ?? "",
+          experience: student.experience ?? "",
+          department_stream: student.department_stream ?? "",
+          course_duration: student.course_duration ?? "",
+          join_date: student.join_date ?? "",
+          end_date: student.end_date ?? "",
+          course_enrolled: student.course_enrolled ?? "",
+          batch: student.batch ?? "",
+          tutor: student.tutor ?? "",
+        });
+      } catch (error) {
+        console.error("Error fetching student data:", error);
+      }
+    };
+
+    fetchStudent();
+  }, [id]);
+
+  console.log("FormData after fetch:", formData);
+
+
+  const handleSubmit = async () => {
+    try {
+      const response = await axios.put(`https://nystai-backend.onrender.com/update-student/${id}`, formData);
+      console.log("Updated successfully", response.data);
+      alert("Student updated!");
+    } catch (error) {
+      console.error("Update failed", error);
+    }
+  };
+
+
+
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -36,7 +152,14 @@ export default function InputGroup() {
               <div>
                 <Label>First Name</Label>
                 <div className="relative">
-                  <Input placeholder="John" type="text" className="" />
+                  <Input
+                    placeholder="John"
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                  />
                 </div>
               </div>
             </div>
@@ -45,7 +168,9 @@ export default function InputGroup() {
               <div>
                 <Label>Last Name</Label>
                 <div className="relative">
-                  <Input placeholder="Doe" type="text" className="" />
+                  <Input placeholder="Doe" type="text" className=""
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -53,12 +178,23 @@ export default function InputGroup() {
             <div className="space-y-6">
               <div>
                 <DatePicker
-                  id="date-picker"
+                  id="dob"
                   label="Date Of Birth"
-                  placeholder="Select a date"
-                  onChange={(dates, currentDateString) => {
-                    // Handle your logic
-                    console.log({ dates, currentDateString });
+                  placeholder="Select date of birth"
+                  maxDate={new Date(new Date().setFullYear(new Date().getFullYear() - 21))}
+                  value={
+                    formData.dob && !isNaN(Date.parse(formData.dob))
+                      ? new Date(formData.dob)
+                      : undefined
+                  }
+                  onChange={(date) => {
+                    const selectedDate = Array.isArray(date) ? date[0] : date;
+                    setFormData({
+                      ...formData,
+                      dob: selectedDate
+                        ? selectedDate.toISOString().split("T")[0]
+                        : "",
+                    });
                   }}
                 />
               </div>
@@ -71,8 +207,9 @@ export default function InputGroup() {
                 </Label>
                 <div className="relative">
                   <CustomDropdown
-                    options={["Male", "Female", "Other"] as const}
-                    onSelect={(value) => console.log("Selected:", value)}
+                    options={["Male", "Female", "Other"]}
+                    selected={formData.gender as "Male" | "Female" | "Other"}
+                    onSelect={(value) => setFormData({ ...formData, gender: value })}
                   />
                 </div>
               </div>
@@ -84,7 +221,9 @@ export default function InputGroup() {
               <div>
                 <Label>Mail ID</Label>
                 <div className="relative">
-                  <Input placeholder="info@gmail.com" type="email" className="" />
+                  <Input placeholder="info@gmail.com" type="email" className=""
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -93,7 +232,9 @@ export default function InputGroup() {
               <div>
                 <Label>Phone Number</Label>
                 <div className="relative">
-                  <Input placeholder="9876543210" type="tel" className="" />
+                  <Input placeholder="9876543210" type="tel" className=""
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -102,7 +243,9 @@ export default function InputGroup() {
               <div>
                 <Label>Alternate Phone</Label>
                 <div className="relative">
-                  <Input placeholder="9876543211" type="tel" className="" />
+                  <Input placeholder="9876543211" type="tel" className=""
+                    value={formData.alt_phone}
+                    onChange={(e) => setFormData({ ...formData, alt_phone: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -111,7 +254,9 @@ export default function InputGroup() {
               <div>
                 <Label>Aadhar Number</Label>
                 <div className="relative">
-                  <Input placeholder="XXXX-XXXX-XXXX" type="text" className="" />
+                  <Input placeholder="XXXX-XXXX-XXXX" type="text" className=""
+                    value={formData.aadhar_number}
+                    onChange={(e) => setFormData({ ...formData, aadhar_number: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -122,7 +267,9 @@ export default function InputGroup() {
               <div>
                 <Label>PAN Number</Label>
                 <div className="relative">
-                  <Input placeholder="ABCDE1234F" type="text" className="" />
+                  <Input placeholder="ABCDE1234F" type="text" className=""
+                    value={formData.pan_number}
+                    onChange={(e) => setFormData({ ...formData, pan_number: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -131,7 +278,9 @@ export default function InputGroup() {
               <div>
                 <Label>Address</Label>
                 <div className="relative">
-                  <Input placeholder="123 Street, City" type="text" className="" />
+                  <Input placeholder="123 Street, City" type="text" className=""
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -140,7 +289,9 @@ export default function InputGroup() {
               <div>
                 <Label>Pincode</Label>
                 <div className="relative">
-                  <Input placeholder="600001" type="text" className="" />
+                  <Input placeholder="600001" type="text" className=""
+                    value={formData.pincode}
+                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -149,7 +300,9 @@ export default function InputGroup() {
               <div>
                 <Label>State</Label>
                 <div className="relative">
-                  <Input placeholder="Tamil Nadu" type="text" className="" />
+                  <Input placeholder="Tamil Nadu" type="text" className=""
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -161,7 +314,9 @@ export default function InputGroup() {
               <div>
                 <Label>Department</Label>
                 <div className="relative">
-                  <Input placeholder="Department Name" type="text" className="" />
+                  <Input placeholder="Department Name" type="text" className=""
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -171,7 +326,9 @@ export default function InputGroup() {
               <div>
                 <Label>Course</Label>
                 <div className="relative">
-                  <Input placeholder="Course Name" type="text" className="" />
+                  <Input placeholder="Course Name" type="text" className=""
+                    value={formData.course}
+                    onChange={(e) => setFormData({ ...formData, course: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -181,7 +338,9 @@ export default function InputGroup() {
               <div>
                 <Label>Year Of Passed</Label>
                 <div className="relative">
-                  <Input placeholder="e.g. 2022" type="text" className="" />
+                  <Input placeholder="e.g. 2022" type="text" className=""
+                    value={formData.year_of_passed}
+                    onChange={(e) => setFormData({ ...formData, year_of_passed: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -191,7 +350,9 @@ export default function InputGroup() {
               <div>
                 <Label>Experience</Label>
                 <div className="relative">
-                  <Input placeholder="e.g. 2 years" type="text" className="" />
+                  <Input placeholder="e.g. 2 years" type="text" className=""
+                    value={formData.experience}
+                    onChange={(e) => setFormData({ ...formData, experience: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -207,7 +368,9 @@ export default function InputGroup() {
               <div>
                 <Label>Department / Stream</Label>
                 <div className="relative">
-                  <Input placeholder="John" type="text" className="" />
+                  <Input placeholder="John" type="text" className=""
+                    value={formData.department_stream}
+                    onChange={(e) => setFormData({ ...formData, department_stream: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -216,7 +379,9 @@ export default function InputGroup() {
               <div>
                 <Label>Course Duration</Label>
                 <div className="relative">
-                  <Input placeholder="Doe" type="text" className="" />
+                  <Input placeholder="Doe" type="text" className=""
+                    value={formData.course_duration}
+                    onChange={(e) => setFormData({ ...formData, course_duration: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -226,12 +391,20 @@ export default function InputGroup() {
                 <div className="space-y-6">
                   <div>
                     <DatePicker
-                      id="date-picker"
+                      id="join-date"
                       label="Join Date"
                       placeholder="Select a date"
-                      onChange={(dates, currentDateString) => {
-                        // Handle your logic
-                        console.log({ dates, currentDateString });
+                      value={
+                        formData.join_date && !isNaN(Date.parse(formData.join_date))
+                          ? new Date(formData.join_date)
+                          : undefined
+                      }
+                      onChange={(date) => {
+                        const selectedDate = Array.isArray(date) ? date[0] : date;
+                        setFormData({
+                          ...formData,
+                          join_date: selectedDate ? selectedDate.toISOString().split("T")[0] : "",
+                        });
                       }}
                     />
                   </div>
@@ -242,12 +415,21 @@ export default function InputGroup() {
             <div className="space-y-6">
               <div>
                 <DatePicker
-                  id="date-picker"
+                  id="end-date"
                   label="End Date"
                   placeholder="Select a date"
-                  onChange={(dates, currentDateString) => {
-                    // Handle your logic
-                    console.log({ dates, currentDateString });
+                  value={
+                    formData.end_date && !isNaN(Date.parse(formData.end_date))
+                      ? new Date(formData.end_date)
+                      : undefined
+                  }
+
+                  onChange={(date) => {
+                    const selectedDate = Array.isArray(date) ? date[0] : date;
+                    setFormData({
+                      ...formData,
+                      end_date: selectedDate ? selectedDate.toISOString().split("T")[0] : "",
+                    });
                   }}
                 />
               </div>
@@ -260,7 +442,9 @@ export default function InputGroup() {
               <div>
                 <Label>Course Enrolled</Label>
                 <div className="relative">
-                  <Input placeholder="Course Name" type="text" className="" />
+                  <Input placeholder="Course Name" type="text" className=""
+                    value={formData.course_enrolled}
+                    onChange={(e) => setFormData({ ...formData, course_enrolled: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -270,7 +454,9 @@ export default function InputGroup() {
               <div>
                 <Label>Batch</Label>
                 <div className="relative">
-                  <Input placeholder="e.g. 2022-2023" type="text" className="" />
+                  <Input placeholder="e.g. 2022-2023" type="text" className=""
+                    value={formData.batch}
+                    onChange={(e) => setFormData({ ...formData, batch: e.target.value })} />
                 </div>
               </div>
             </div>
@@ -281,8 +467,9 @@ export default function InputGroup() {
                 <Label>Tutor</Label>
                 <div className="relative">
                   <CustomDropdown
-                    options={["Male", "Female", "Other"]}
-                    onSelect={(value) => console.log("Selected:", value)}
+                    options={["Mohamed Yusuf Deen", "Sivaguru", "Others"]}
+                    selected={formData.tutor as "Mohamed Yusuf Deen" | "Sivaguru" | "Others"}
+                    onSelect={(value) => setFormData({ ...formData, tutor: value })}
                   />
                 </div>
               </div>
@@ -320,16 +507,14 @@ export default function InputGroup() {
           {/* BTN  */}
           <div className="grid xl:grid-cols-2 gap-6">
             <div className="col-span-full flex justify-center">
-              <a
-                href="/add-admin"
+              <button
+                onClick={handleSubmit}
                 className="flex items-center justify-center px-32 py-3 font-medium text-dark rounded-lg bg-[#F8C723] text-theme-sm hover:bg-brand-600"
               >
-                CLICK TO REGISTER
-              </a>
+                UPDATE STUDENT
+              </button>
             </div>
           </div>
-
-
         </div>
       </div>
     </div>
@@ -342,15 +527,16 @@ type CustomDropdownProps<T extends string> = {
   label?: string;
   options: T[];
   onSelect?: (value: T) => void;
+  selected?: T;
 };
 
 function CustomDropdown<T extends string>({
   label = "Select",
   options = [],
   onSelect,
+  selected,
 }: CustomDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState<T | "">("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -364,7 +550,6 @@ function CustomDropdown<T extends string>({
   }, []);
 
   const handleSelect = (value: T) => {
-    setSelected(value);
     setIsOpen(false);
     onSelect?.(value);
   };

@@ -17,6 +17,7 @@ type PropsType = {
   maxDate?: Date | string;
   className?: string;
   minDate?: Date | string;
+  defaultValue?: string;
 };
 
 
@@ -31,6 +32,7 @@ export default function DatePicker({
   placeholder,
   className,
   minDate,
+  value,
 }: PropsType) {
   useEffect(() => {
     const flatPickr = flatpickr(`#${id}`, {
@@ -59,9 +61,11 @@ export default function DatePicker({
         <input
           id={id}
           placeholder={placeholder}
-          defaultValue={defaultDate ? new Date(defaultDate).toISOString().split("T")[0] : ""}
+          value={value ? new Date(value).toISOString().split("T")[0] : ""}
+          onChange={() => { }} // empty handler to satisfy React controlled input rule
           className="h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3  dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 bg-[#F5F5F5] text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-brand-500/20 dark:border-gray-700  dark:focus:border-brand-800"
         />
+
 
         <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
           <CalenderIcon className="size-6" />

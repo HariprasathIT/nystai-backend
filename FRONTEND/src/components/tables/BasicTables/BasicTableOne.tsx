@@ -148,6 +148,7 @@ export default function BasicTableOne() {
                     <ActionDropdown
                       onEdit={() => console.log("Edit", student.student_id)}
                       onDelete={() => handleDelete(student.student_id)}
+                      studentId={student.student_id}
                     />
                   </div>
                 </TableCell>
@@ -163,9 +164,11 @@ export default function BasicTableOne() {
 function ActionDropdown({
   onEdit,
   onDelete,
+  studentId,
 }: {
   onEdit: () => void;
   onDelete: () => void;
+    studentId: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -192,7 +195,7 @@ function ActionDropdown({
       {isOpen && (
         <div className="absolute right-0 z-10 mt-2 w-[200px] rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark">
           <ul className="flex flex-col gap-1">
-            <Link to="/Editstudentform" >
+          <Link to={`/Editstudentform/${studentId}`}>
               <li>
                 <button
                   onClick={onEdit}

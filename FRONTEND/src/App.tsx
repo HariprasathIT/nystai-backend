@@ -52,7 +52,7 @@ export default function App() {
 
             {/* Forms */}
             <Route path="/Addstudentform" element={<FormElements />} />
-            <Route path="/Editstudentform" element={<FormeditElements />} />
+            <Route path="/Editstudentform/:id" element={<FormeditElements />} />
 
             {/* Tables */}
             <Route path="/basic-tables" element={<BasicTables />} />
