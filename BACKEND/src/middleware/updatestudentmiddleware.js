@@ -5,19 +5,16 @@ export const validateUpdateStudentCourse = [
 
   body('name')
     .trim()
-    .notEmpty().withMessage('Name is required')
     .isLength({ min: 4, max: 30 }).withMessage('Name must be between 4 and 30 characters')
     .isAlpha().withMessage('Name must contain only letters'),
 
   body('last_name')
     .trim()
-    .notEmpty().withMessage('Last name is required')
     .isLength({ min: 4, max: 30 }).withMessage('Last name must be between 4 and 30 characters')
     .isAlpha().withMessage('Last name must contain only letters'),
 
   body('dob')
     .trim()
-    .notEmpty().withMessage('Date of birth is required')
     .isDate().withMessage('Date of birth must be a valid date')
     .custom((value) => {
       const dob = new Date(value);
@@ -38,12 +35,10 @@ export const validateUpdateStudentCourse = [
 
   body('gender')
     .trim()
-    .notEmpty().withMessage('Gender is required')
     .isIn(['Male', 'Female', 'Other']).withMessage('Invalid gender option'),
 
   body('email')
     .trim()
-    .notEmpty().withMessage('Email is required')
     .isEmail().withMessage('Invalid email address')
     .matches(/@(?:gmail\.com|yahoo\.com|outlook\.com|.+\.org)$/)
     .withMessage('Only gmail.com, yahoo.com, outlook.com, or .org emails are allowed')
@@ -60,7 +55,6 @@ export const validateUpdateStudentCourse = [
 
   body('phone')
     .trim()
-    .notEmpty().withMessage('Phone number is required')
     .matches(/^[6-9]\d{9}$/).withMessage('Invalid phone number, Phone number must be 10 digits, starting with 6-9')
     .custom(async (value, { req }) => {
       const { rows } = await pool.query(
@@ -76,7 +70,6 @@ export const validateUpdateStudentCourse = [
 
   body('alt_phone')
     .trim()
-    .notEmpty().withMessage('Alternate phone number is required')
     .isMobilePhone('en-IN').withMessage('Invalid alternate phone number, must be 10 digits, starting with 6-9')
     .custom(async (value, { req }) => {
       const { rows } = await pool.query(
@@ -92,7 +85,6 @@ export const validateUpdateStudentCourse = [
 
   body('aadhar_number')
     .trim()
-    .notEmpty().withMessage('Aadhar number is required')
     .isLength({ min: 12, max: 12 }).withMessage('Aadhar must be 12 digits')
     .matches(/^\d{12}$/).withMessage('Aadhar must contain only 12 numeric digits')
     .custom(async (value, { req }) => {
@@ -106,60 +98,47 @@ export const validateUpdateStudentCourse = [
 
   body('pan_number')
     .trim()
-    .notEmpty().withMessage('PAN number is required')
     .isAlphanumeric().withMessage('PAN number must be alphanumeric')
     .isLength({ min: 10, max: 10 }).withMessage('PAN must be 10 characters'),
 
   body('pincode')
     .trim()
-    .notEmpty().withMessage('Pincode is required')
     .matches(/^[1-9][0-9]{5}$/).withMessage('Pincode must be a 6-digit number starting from 1 to 9')
     .isLength({ min: 6, max: 6 }).withMessage('Pincode must be exactly 6 digits'),
 
   body('address')
-    .trim()
-    .notEmpty().withMessage('Address is required'),
+    .trim(),
 
   body('state')
-    .trim()
-    .notEmpty().withMessage('State is required'),
+    .trim(),
 
   // Course Info (Optional)
   body('department')
-    .trim()
-    .notEmpty().withMessage('Department is required'),
+    .trim(),
 
   body('course')
-    .trim()
-    .notEmpty().withMessage('Course is required'),
+    .trim(),
 
   body('year_of_passed')
-    .trim()
-    .notEmpty().withMessage('Year of passing is required'),
+    .trim(),
 
   body('experience')
-    .trim()
-    .notEmpty().withMessage('Experience is required'),
+    .trim(),
 
   body('department_stream')
-    .trim()
-    .notEmpty().withMessage('Department stream is required'),
+    .trim(),
 
   body('course_duration')
-    .trim()
-    .notEmpty().withMessage('Course duration is required'),
+    .trim(),
 
   body('join_date')
-    .trim()
-    .notEmpty().withMessage('Join date is required'),
+    .trim(),
 
   body('end_date')
-    .trim()
-    .notEmpty().withMessage('End date is required'),
+    .trim(),
 
   body('course_enrolled')
     .trim()
-    .notEmpty().withMessage('Course enrolled is required')
     .custom((value) => {
       const allowedCourses = ['IOT', 'CCTV'];
       if (!allowedCourses.includes(value)) {
@@ -169,12 +148,10 @@ export const validateUpdateStudentCourse = [
     }),
 
   body('batch')
-    .trim()
-    .notEmpty().withMessage('Batch is required'),
+    .trim(),
 
   body('tutor')
-    .trim()
-    .notEmpty().withMessage('Tutor is required'),
+    .trim(),
 
   // Check for validation errors
   (req, res, next) => {

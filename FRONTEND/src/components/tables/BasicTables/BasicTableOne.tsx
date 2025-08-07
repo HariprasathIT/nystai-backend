@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from "react";
 import { MoreVertical } from "lucide-react";
 import Badge from "../../ui/badge/Badge";
 import axios from "axios";
+import { Link } from "react-router";
 
 type Student = {
   student_id: number;
@@ -191,14 +192,17 @@ function ActionDropdown({
       {isOpen && (
         <div className="absolute right-0 z-10 mt-2 w-[200px] rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark">
           <ul className="flex flex-col gap-1">
-            <li>
-              <button
-                onClick={onEdit}
-                className="flex w-full font-normal text-left px-3 py-2 text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
-              >
-                ✏️ Edit Details
-              </button>
-            </li>
+            <Link to="/Editstudentform" >
+              <li>
+                <button
+                  onClick={onEdit}
+                  className="flex w-full font-normal text-left px-3 py-2 text-gray-500 rounded-lg hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
+                >
+                  ✏️ Edit Details
+                </button>
+              </li>
+            </Link>
+
             <li>
               <button
                 onClick={onDelete}

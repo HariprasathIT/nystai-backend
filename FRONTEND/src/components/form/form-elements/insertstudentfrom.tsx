@@ -1,5 +1,5 @@
-import Label from "../Label";
-import Input from "../input/InputField";
+import Label from "../Label.tsx";
+import Input from "../input/InputField.tsx";
 import DatePicker from "../date-picker.tsx";
 import {
   faChevronDown
@@ -11,7 +11,7 @@ import Upload from "../../../icons/Upload icon.png";
 import Uploadafter from "../../../icons/OIP.webp";
 import { toast } from 'react-hot-toast';
 
-export default function InputGroup() {
+export default function StudentAddForm() {
 
   const [formData, setFormData] = useState({
     name: '',

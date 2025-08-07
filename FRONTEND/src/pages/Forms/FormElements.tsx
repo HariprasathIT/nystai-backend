@@ -1,6 +1,6 @@
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
-import InputGroup from "../../components/form/form-elements/InputGroup";
 import PageMeta from "../../components/common/PageMeta";
+import StudentAddForm from "../../components/form/form-elements/insertstudentfrom";
 
 export default function FormElements() {
   return (
@@ -12,7 +12,7 @@ export default function FormElements() {
 
       <PageBreadcrumb pageTitle="Add Student Form" />
       <div className="space-y-12">
-        <InputGroup />
+        <StudentAddForm />
       </div>
     </div>
   );
