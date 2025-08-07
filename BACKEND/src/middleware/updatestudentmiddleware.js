@@ -15,8 +15,15 @@ export const validateUpdateStudentCourse = [
 
   body('dob')
     .trim()
-    .isDate().withMessage('Date of birth must be a valid date')
+    .notEmpty().withMessage('Date of birth is required')
     .custom((value) => {
+      // Check if it's a valid date
+      const parsed = Date.parse(value);
+      if (isNaN(parsed)) {
+        throw new Error('Date of birth must be a valid date');
+      }
+
+      // Age validation
       const dob = new Date(value);
       const today = new Date();
       const age = today.getFullYear() - dob.getFullYear();
