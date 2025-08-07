@@ -3,7 +3,6 @@ import { uploadFields, validateUploadedFiles } from '../middleware/uploadMiddlew
 import { deleteStudent, getAllStudents, getStudentById, insertStudentWithProof, updateStudentWithProof } from '../controllers/blobController.js';
 import { validateStudent } from '../middleware/validateStudent.js';
 import { validationResult } from 'express-validator';
-import { validateUpdateStudentCourse } from '../middleware/updatestudentmiddleware.js';
 
 const router = express.Router();
 
@@ -11,7 +10,7 @@ const router = express.Router();
 router.post('/insert-student',
     uploadFields,           //  handle passport_photo, pan_card, aadhar_card, sslc_marksheet
     validateStudent,        //  express-validator middlewares
-    validateUploadedFiles, //  custom middleware to check required files
+    validateUploadedFiles, 
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -26,7 +25,7 @@ router.post('/insert-student',
 router.get('/get-all-students', getAllStudents);
 
 //  Update student with file uploads
-router.put('/update-student/:student_id', uploadFields, validateUpdateStudentCourse, updateStudentWithProof);
+router.put('/update-student/:student_id', uploadFields, updateStudentWithProof);
 
 // Delete student route
 router.delete('/students/:id', deleteStudent);
