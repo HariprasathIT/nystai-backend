@@ -41,8 +41,6 @@ export const validateStudent = [
             return true;
         }),
 
-
-
     body('gender')
         .trim()
         .notEmpty().withMessage('Gender is required')
