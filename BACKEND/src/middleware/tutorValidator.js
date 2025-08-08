@@ -14,7 +14,21 @@ export const tutorInputValidator = [
         .isLength({ max: 4 }).withMessage("Last name must be at most 4 characters long")
         .matches(/^[A-Za-z\s]+$/).withMessage("Last name must contain only in letters"),
 
-    body("dob").notEmpty().withMessage("Date of birth is required"),
+    body("dob")
+        .notEmpty().withMessage("Date of birth is required")
+        .isISO8601().withMessage("Date of birth must be a valid date")
+        .custom((value) => {
+            const inputDate = new Date(value);
+            const today = new Date();
+            inputDate.setHours(0, 0, 0, 0);
+            today.setHours(0, 0, 0, 0);
+
+            if (inputDate > today) {
+                throw new Error("Date of birth cannot be in the future");
+            }
+            return true;
+        }),
+
 
     body("gender").notEmpty().withMessage("Gender is required"),
 

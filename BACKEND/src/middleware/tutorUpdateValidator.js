@@ -1,6 +1,7 @@
 import { body } from "express-validator";
 import db from "../config/db.js";
 import { validationResult } from "express-validator";
+import multer from 'multer';
 
 const validDomains = ["gmail.com", "yahoo.com", "outlook.com"];
 
@@ -15,7 +16,21 @@ export const tutorUpdateValidator = [
         .isLength({ max: 4 }).withMessage("Last name must be at most 4 characters long")
         .matches(/^[A-Za-z\s]+$/).withMessage("Last name must contain only in letters"),
 
-    body("dob").notEmpty().withMessage("Date of birth is required"),
+    body("dob")
+        .notEmpty().withMessage("Date of birth is required")
+        .isISO8601().withMessage("Date of birth must be a valid date")
+        .custom((value) => {
+            const inputDate = new Date(value);
+            const today = new Date();
+            inputDate.setHours(0, 0, 0, 0);
+            today.setHours(0, 0, 0, 0);
+
+            if (inputDate > today) {
+                throw new Error("Date of birth cannot be in the future");
+            }
+            return true;
+        }),
+
 
     body("gender").notEmpty().withMessage("Gender is required"),
 
@@ -68,4 +83,29 @@ export const handleUpdateTutorValidation = (req, res, next) => {
     next();
 };
 
+// This is for Uploading Tutor Image Validation
 
+const storage = multer.memoryStorage();
+
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed (jpeg, png, webp, gif, jpg)'));
+  }
+};
+
+export const uploadImageTutor = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter
+});
+
+
+export const checkTutorImageRequired = (req, res, next) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "Tutor image is required" });
+  }
+  next();
+};
