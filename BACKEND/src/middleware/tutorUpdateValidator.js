@@ -10,9 +10,10 @@ export const tutorUpdateValidator = [
         .isLength({ min: 4, max: 30 }).withMessage('First name must be between 4 and 30 characters')
         .isAlpha().withMessage('Name must contain only letters'),
 
-    body("last_name").notEmpty().withMessage("Last name is required")
-        .isLength({ min: 4, max: 30 }).withMessage('Last name must be between 4 and 30 characters')
-        .isAlpha().withMessage('Name must contain only letters'),
+    body("last_name")
+        .notEmpty().withMessage("Last name is required")
+        .isLength({ max: 4 }).withMessage("Last name must be at most 4 characters long")
+        .matches(/^[A-Za-z\s]+$/).withMessage("Last name must contain only in letters"),
 
     body("dob").notEmpty().withMessage("Date of birth is required"),
 
