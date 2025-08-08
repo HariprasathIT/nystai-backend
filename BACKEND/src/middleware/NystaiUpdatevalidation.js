@@ -1,7 +1,7 @@
 import { body, validationResult } from 'express-validator';
 
 
-export const validateInsertCourseInput = [
+export const validateUpdateCourseInput = [
     body('course_name')
         .trim()
         .notEmpty().withMessage('Course name is required')
@@ -24,7 +24,7 @@ export const validateInsertCourseInput = [
         })
 ];
 
-export const handleInsertValidationErrors = (req, res, next) => {
+export const handleUpdateValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {

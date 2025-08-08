@@ -1,7 +1,7 @@
 import { body } from 'express-validator';
 import { validationResult } from 'express-validator';
 
-export const validateInputPricingPlan = [
+export const validateUpdatePricingPlan = [
   body('plan_name')
     .trim()
     .notEmpty().withMessage('Plan name is required')
@@ -41,7 +41,7 @@ export const validateInputPricingPlan = [
     .trim()
 ];
 
-export const handleInputPricingPlanValidationErrors = (req, res, next) => {
+export const handleUpdatePricingPlanValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });

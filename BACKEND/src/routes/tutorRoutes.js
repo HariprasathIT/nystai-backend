@@ -1,19 +1,19 @@
 import express from "express";
 import { addtutor, deletetutor, getalltutors, getsingletutor, updatetutor } from "../controllers/tutorController.js";
 import multer from 'multer';
-import tutorValidator from "../middleware/tutorValidator.js";
-import handleValidation from "../middleware/handleValidation.js";
-import { tutorUpdateValidator } from "../middleware/tutorUpdateValidator.js";
+import {tutorInputValidator, handleInputTutorValidation } from "../middleware/tutorValidator.js";
+
+import { handleUpdateTutorValidation, tutorUpdateValidator } from "../middleware/tutorUpdateValidator.js";
 
 const upload = multer();
 
 const router = express.Router();
 
 // POST 
-router.post("/addtutor", upload.none(), tutorValidator, handleValidation, addtutor);
+router.post("/addtutor", upload.none(), tutorInputValidator, handleInputTutorValidation, addtutor);
 
 // Update single tutor
-router.put("/updatetutor/:id", upload.none(), tutorUpdateValidator, handleValidation, updatetutor);
+router.put("/updatetutor/:id", upload.none(), tutorUpdateValidator, handleUpdateTutorValidation, updatetutor);
 
 // Get all tutors
 router.get("/getalltutors", getalltutors);
