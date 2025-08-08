@@ -12,14 +12,27 @@ export const Addingcourses = async (req, res, next) => {
   try {
     if (!file) throw new Error('Image file is required');
 
-    // Upload buffer directly to Vercel Blob
+    // Check if the same course already exists
+    const checkQuery = `
+      SELECT * FROM nystaiallcourses 
+      WHERE course_name = $1 AND course_duration = $2 AND card_overview = $3
+    `;
+    const existing = await db.query(checkQuery, [course_name, course_duration, card_overview]);
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({
+        message: 'This Course is already exists'
+      });
+    }
+
+    // Upload image to Vercel Blob
     const blob = await put(`NystaicoursesImages/${file.originalname}`, file.buffer, {
       access: 'public',
       token: process.env.VERCEL_BLOB_RW_TOKEN,
       addRandomSuffix: true
     });
 
-    // Insert into Neon DB 
+    // Insert into Neon DB
     const result = await db.query(
       `INSERT INTO nystaiallcourses (course_name, course_duration, card_overview, image_url)
        VALUES ($1, $2, $3, $4) RETURNING *`,
@@ -34,6 +47,7 @@ export const Addingcourses = async (req, res, next) => {
     next(err);
   }
 };
+
 
 
 // Fetching all courses from the database

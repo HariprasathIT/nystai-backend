@@ -26,7 +26,7 @@ app.use('/AdminorTutor', authRoutes);
 app.use('/Allcourses', Nystaicoursesroutes);
 app.use('/pricing-plans', pricingPlanRoutes);
 app.use('/NystaiTutors', tutorRoutes)
-app.use('/Srevert-task-done/', StudentTasks)
+app.use('/Students-Tasks', StudentTasks)
 
 
 

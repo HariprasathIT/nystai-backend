@@ -38,6 +38,11 @@ type StudentFormData = {
   course_enrolled: string;
   batch: string;
   tutor: string;
+  certificate_status: string;
+  pan_card?: string;
+  aadhar_card?: string;
+  sslc_marksheet?: string;
+  passport_photo?: string;
 };
 
 
@@ -66,7 +71,12 @@ export default function StudentEditForm() {
     end_date: "",
     course_enrolled: "",
     batch: "",
-    tutor: ""
+    tutor: "",
+    certificate_status: "",
+    pan_card: "",
+    aadhar_card: "",
+    sslc_marksheet: "",
+    passport_photo: ""
   });
 
 
@@ -104,6 +114,11 @@ export default function StudentEditForm() {
           course_enrolled: student.course_enrolled ?? "",
           batch: student.batch ?? "",
           tutor: student.tutor ?? "",
+          certificate_status: student.certificate_status ?? "",
+          pan_card: student.pan_card_url ?? "",
+          aadhar_card: student.aadhar_card_url ?? "",
+          sslc_marksheet: student.sslc_marksheet_url ?? "",
+          passport_photo: student.passport_photo_url ?? ""
         });
       } catch (error) {
         console.error("Error fetching student data:", error);
@@ -476,6 +491,22 @@ export default function StudentEditForm() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
+            <div className="space-y-6">
+              <div>
+                <Label>Certificate Status</Label>
+                <div className="relative">
+                  <CustomDropdown
+                    options={["Completed", "In Progress"]}
+                    selected={formData.certificate_status as "Completed" | "In Progress"}
+                    onSelect={(value) => setFormData({ ...formData, certificate_status: value })}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+
           {/* Heading design */}
           <h3 className="text-l font-semibold text-[#202224] dark:text-white/90 py-4">
             Upload Documents
@@ -485,24 +516,26 @@ export default function StudentEditForm() {
           {/* UPLOAD IMAGE  */}
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <div className="space-y-6">
-              <Label> Pan Card</Label>
-              <FileUploadBox />
+              <Label>Pan Card</Label>
+              <FileUploadBox defaultFile={formData.pan_card} />
             </div>
             <div className="space-y-6">
               <Label>Aadhar Card</Label>
-              <FileUploadBox />
+              <FileUploadBox defaultFile={formData.aadhar_card} />
             </div>
           </div>
+
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <div className="space-y-6">
-              <Label> SSLC Marksheet</Label>
-              <FileUploadBox />
+              <Label>SSLC Marksheet</Label>
+              <FileUploadBox defaultFile={formData.sslc_marksheet} />
             </div>
             <div className="space-y-6">
-              <Label> Passport Size Photo</Label>
-              <FileUploadBox />
+              <Label>Passport Size Photo</Label>
+              <FileUploadBox defaultFile={formData.passport_photo} />
             </div>
           </div>
+
 
           {/* BTN  */}
           <div className="grid xl:grid-cols-2 gap-6">
@@ -594,13 +627,19 @@ function CustomDropdown<T extends string>({
 import { useCallback } from "react";
 import { Trash2 } from "lucide-react";
 
-function FileUploadBox() {
+type FileUploadBoxProps = {
+  defaultFile?: string; // for edit mode (URL or file name)
+};
+
+function FileUploadBox({ defaultFile }: FileUploadBoxProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(defaultFile || null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
       setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
     }
   }, []);
 
@@ -609,32 +648,32 @@ function FileUploadBox() {
     multiple: false,
   });
 
-  const handleDelete = () => setSelectedFile(null);
+  const handleDelete = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+  };
 
-  // Render uploaded file preview card
-  if (selectedFile) {
-    const fileSizeMB = (selectedFile.size / (1024 * 1024)).toFixed(1);
+  const fileName = selectedFile?.name || (defaultFile ? defaultFile.split("/").pop() : "");
+  const fileSizeMB = selectedFile ? (selectedFile.size / (1024 * 1024)).toFixed(1) : null;
 
-
+  if (previewUrl) {
     return (
       <div className="bg-white flex justify-between items-center px-4 py-3 rounded-xl shadow border h-[176px]">
         <div className="flex items-center gap-4">
-          {/* File icon */}
-          <div className="">
+          <div>
             <img
               src={Uploadafter}
               alt="Preview"
               className="h-12 w-12 object-contain"
             />
           </div>
-          {/* File name and size */}
           <div>
-            <p className="text-sm font-medium">{selectedFile.name}</p>
-            <p className="text-xs text-gray-500">{fileSizeMB} MB</p>
+            <p className="text-sm font-medium">{fileName}</p>
+            <p className="text-xs text-gray-500">
+              {fileSizeMB ? `${fileSizeMB} MB` : "Uploaded"}
+            </p>
           </div>
         </div>
-
-        {/* Delete button */}
         <button
           onClick={handleDelete}
           className="text-gray-500 hover:text-red-500 transition"
@@ -645,28 +684,23 @@ function FileUploadBox() {
     );
   }
 
-  // Render upload dropzone
   return (
     <div className="transition border border-gray-300 border-dashed cursor-pointer dark:hover:border-brand-500 dark:border-gray-700 rounded-xl hover:border-brand-500 h-[176px]">
       <form
         {...getRootProps()}
         className={`dropzone h-full rounded-xl border-dashed border-gray-300 p-7 lg:p-10
-      ${isDragActive
+        ${isDragActive
             ? "border-brand-500 bg-gray-100 dark:bg-gray-800"
-            : "border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"}
-    `}
+            : "border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"}`}
         id="demo-upload"
       >
         <input {...getInputProps()} />
         <div className="dz-message flex flex-row items-center m-0 gap-6 h-full">
-          {/* Icon Container */}
           <div className="flex justify-center items-center shrink-0">
             <div className="flex h-[68px] w-[68px] items-center justify-center rounded-full text-gray-700 dark:bg-gray-800 dark:text-gray-400">
               <img src={Upload} alt="Upload Icon" className="h-12 w-12 object-contain" />
             </div>
           </div>
-
-          {/* Text Content */}
           <div className="max-w-[400px] text-center">
             <h4 className="mb-2 font-semibold text-gray-800 text-theme-xl dark:text-white/90">
               {isDragActive ? "Drop Files or" : "Drag & Drop Files or"}{" "}
@@ -681,6 +715,7 @@ function FileUploadBox() {
         </div>
       </form>
     </div>
-
   );
 }
+
+
