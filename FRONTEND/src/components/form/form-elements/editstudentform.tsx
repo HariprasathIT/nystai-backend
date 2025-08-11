@@ -2,14 +2,11 @@
 import Label from "../Label";
 import Input from "../input/InputField";
 import DatePicker from "../date-picker.tsx";
-import {
-  faChevronDown
-} from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import Upload from "../../../icons/Upload icon.png";
-import Uploadafter from "../../../icons/OIP.webp";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 
@@ -38,11 +35,17 @@ type StudentFormData = {
   course_enrolled: string;
   batch: string;
   tutor: string;
-  certificate_status: string;
-  pan_card?: string;
-  aadhar_card?: string;
-  sslc_marksheet?: string;
-  passport_photo?: string;
+  // certificate_status: string;
+  // Old files (Receiving)
+  pan_card_url?: string;
+  aadhar_card_url?: string;
+  sslc_marksheet_url?: string;
+  passport_photo_url?: string;
+  // New files (for upload)
+  pan_card?: File | null;
+  aadhar_card?: File | null;
+  sslc_marksheet?: File | null;
+  passport_photo?: File | null;
 };
 
 
@@ -72,13 +75,12 @@ export default function StudentEditForm() {
     course_enrolled: "",
     batch: "",
     tutor: "",
-    certificate_status: "",
-    pan_card: "",
-    aadhar_card: "",
-    sslc_marksheet: "",
-    passport_photo: ""
+    // certificate_status: "",
+    pan_card_url: "",
+    aadhar_card_url: "",
+    sslc_marksheet_url: "",
+    passport_photo_url: ""
   });
-
 
   const { id } = useParams();
 
@@ -114,11 +116,11 @@ export default function StudentEditForm() {
           course_enrolled: student.course_enrolled ?? "",
           batch: student.batch ?? "",
           tutor: student.tutor ?? "",
-          certificate_status: student.certificate_status ?? "",
-          pan_card: student.pan_card_url ?? "",
-          aadhar_card: student.aadhar_card_url ?? "",
-          sslc_marksheet: student.sslc_marksheet_url ?? "",
-          passport_photo: student.passport_photo_url ?? ""
+          // certificate_status: student.certificate_status ?? "",
+          pan_card_url: student.pan_card_url ?? "",
+          aadhar_card_url: student.aadhar_card_url ?? "",
+          sslc_marksheet_url: student.sslc_marksheet_url ?? "",
+          passport_photo_url: student.passport_photo_url ?? ""
         });
       } catch (error) {
         console.error("Error fetching student data:", error);
@@ -130,19 +132,42 @@ export default function StudentEditForm() {
 
   console.log("FormData after fetch:", formData);
 
-
   const handleSubmit = async () => {
     try {
-      const response = await axios.put(`https://nystai-backend.onrender.com/update-student/${id}`, formData);
-      console.log("Updated successfully", response.data);
+      const payload = new FormData();
+
+      // Append text fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (
+          value !== undefined &&
+          value !== null &&
+          typeof value !== "object" // avoid appending [object Object]
+        ) {
+          payload.append(key, value as string);
+        }
+      });
+
+      // Append files with exact field names
+      if (formData.pan_card instanceof File)
+        payload.append("pan_card", formData.pan_card);
+      if (formData.aadhar_card instanceof File)
+        payload.append("aadhar_card", formData.aadhar_card);
+      if (formData.sslc_marksheet instanceof File)
+        payload.append("sslc_marksheet", formData.sslc_marksheet);
+      if (formData.passport_photo instanceof File)
+        payload.append("passport_photo", formData.passport_photo);
+
+      await axios.put(
+        `https://nystai-backend.onrender.com/update-student/${id}`,
+        payload,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
       alert("Student updated!");
     } catch (error) {
       console.error("Update failed", error);
     }
   };
-
-
-
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -204,12 +229,22 @@ export default function StudentEditForm() {
                   }
                   onChange={(date) => {
                     const selectedDate = Array.isArray(date) ? date[0] : date;
-                    setFormData({
-                      ...formData,
-                      dob: selectedDate
-                        ? selectedDate.toISOString().split("T")[0]
-                        : "",
-                    });
+
+                    if (selectedDate) {
+                      const year = selectedDate.getFullYear();
+                      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+                      const day = String(selectedDate.getDate()).padStart(2, "0");
+
+                      setFormData({
+                        ...formData,
+                        dob: `${year}-${month}-${day}`, // ✅ Exact date, no UTC shift
+                      });
+                    } else {
+                      setFormData({
+                        ...formData,
+                        dob: "",
+                      });
+                    }
                   }}
                 />
               </div>
@@ -414,13 +449,33 @@ export default function StudentEditForm() {
                           ? new Date(formData.join_date)
                           : undefined
                       }
+                      // onChange={(date) => {
+                      //   const selectedDate = Array.isArray(date) ? date[0] : date;
+                      //   setFormData({
+                      //     ...formData,
+                      //     join_date: selectedDate ? selectedDate.toISOString().split("T")[0] : "",
+                      //   });
+                      // }}
                       onChange={(date) => {
                         const selectedDate = Array.isArray(date) ? date[0] : date;
-                        setFormData({
-                          ...formData,
-                          join_date: selectedDate ? selectedDate.toISOString().split("T")[0] : "",
-                        });
+
+                        if (selectedDate) {
+                          const year = selectedDate.getFullYear();
+                          const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+                          const day = String(selectedDate.getDate()).padStart(2, "0");
+
+                          setFormData({
+                            ...formData,
+                            join_date: `${year}-${month}-${day}`,
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            join_date: "",
+                          });
+                        }
                       }}
+
                     />
                   </div>
                 </div>
@@ -438,13 +493,31 @@ export default function StudentEditForm() {
                       ? new Date(formData.end_date)
                       : undefined
                   }
-
+                  // onChange={(date) => {
+                  //   const selectedDate = Array.isArray(date) ? date[0] : date;
+                  //   setFormData({
+                  //     ...formData,
+                  //     end_date: selectedDate ? selectedDate.toISOString().split("T")[0] : "",
+                  //   });
+                  // }}
                   onChange={(date) => {
                     const selectedDate = Array.isArray(date) ? date[0] : date;
-                    setFormData({
-                      ...formData,
-                      end_date: selectedDate ? selectedDate.toISOString().split("T")[0] : "",
-                    });
+
+                    if (selectedDate) {
+                      const year = selectedDate.getFullYear();
+                      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+                      const day = String(selectedDate.getDate()).padStart(2, "0");
+
+                      setFormData({
+                        ...formData,
+                        end_date: `${year}-${month}-${day}`,
+                      });
+                    } else {
+                      setFormData({
+                        ...formData,
+                        end_date: "",
+                      });
+                    }
                   }}
                 />
               </div>
@@ -491,51 +564,68 @@ export default function StudentEditForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
+          {/* <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
             <div className="space-y-6">
               <div>
                 <Label>Certificate Status</Label>
                 <div className="relative">
                   <CustomDropdown
-                    options={["Completed", "In Progress"]}
-                    selected={formData.certificate_status as "Completed" | "In Progress"}
+                    options={["completed", "pending"]}
+                    selected={formData.certificate_status as "completed" | "pending"}
                     onSelect={(value) => setFormData({ ...formData, certificate_status: value })}
                   />
                 </div>
               </div>
             </div>
-          </div>
-
+          </div> */}
 
           {/* Heading design */}
           <h3 className="text-l font-semibold text-[#202224] dark:text-white/90 py-4">
             Upload Documents
           </h3>
 
-
           {/* UPLOAD IMAGE  */}
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <div className="space-y-6">
               <Label>Pan Card</Label>
-              <FileUploadBox defaultFile={formData.pan_card} />
+              <FileUploadBox
+                defaultFile={formData.pan_card_url}
+                onFileChange={(file) =>
+                  setFormData((prev) => ({ ...prev, pan_card: file }))
+                }
+              />
             </div>
             <div className="space-y-6">
               <Label>Aadhar Card</Label>
-              <FileUploadBox defaultFile={formData.aadhar_card} />
+              <FileUploadBox
+                defaultFile={formData.aadhar_card_url}
+                onFileChange={(file) =>
+                  setFormData((prev) => ({ ...prev, aadhar_card: file }))
+                }
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <div className="space-y-6">
               <Label>SSLC Marksheet</Label>
-              <FileUploadBox defaultFile={formData.sslc_marksheet} />
+              <FileUploadBox
+                defaultFile={formData.sslc_marksheet_url}
+                onFileChange={(file) =>
+                  setFormData((prev) => ({ ...prev, sslc_marksheet: file }))
+                }
+              />
             </div>
             <div className="space-y-6">
               <Label>Passport Size Photo</Label>
-              <FileUploadBox defaultFile={formData.passport_photo} />
+              <FileUploadBox
+                defaultFile={formData.passport_photo_url}
+                onFileChange={(file) =>
+                  setFormData((prev) => ({ ...prev, passport_photo: file }))
+                }
+              />
             </div>
           </div>
-
 
           {/* BTN  */}
           <div className="grid xl:grid-cols-2 gap-6">
@@ -623,25 +713,32 @@ function CustomDropdown<T extends string>({
   );
 }
 
-
 import { useCallback } from "react";
 import { Trash2 } from "lucide-react";
 
 type FileUploadBoxProps = {
   defaultFile?: string; // for edit mode (URL or file name)
+  onFileChange?: (file: File | null) => void;
 };
 
-function FileUploadBox({ defaultFile }: FileUploadBoxProps) {
+function FileUploadBox({ defaultFile, onFileChange }: FileUploadBoxProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(defaultFile || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (defaultFile) {
+      setPreviewUrl(defaultFile);
+    }
+  }, [defaultFile]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+      onFileChange?.(file); // ✅ send file to parent
     }
-  }, []);
+  }, [onFileChange]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -651,6 +748,7 @@ function FileUploadBox({ defaultFile }: FileUploadBoxProps) {
   const handleDelete = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
+    onFileChange?.(null);
   };
 
   const fileName = selectedFile?.name || (defaultFile ? defaultFile.split("/").pop() : "");
@@ -662,7 +760,7 @@ function FileUploadBox({ defaultFile }: FileUploadBoxProps) {
         <div className="flex items-center gap-4">
           <div>
             <img
-              src={Uploadafter}
+              src={previewUrl}
               alt="Preview"
               className="h-12 w-12 object-contain"
             />

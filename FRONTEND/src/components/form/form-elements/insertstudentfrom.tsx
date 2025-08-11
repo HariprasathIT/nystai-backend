@@ -1,9 +1,7 @@
 import Label from "../Label.tsx";
 import Input from "../input/InputField.tsx";
 import DatePicker from "../date-picker.tsx";
-import {
-  faChevronDown
-} from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
@@ -124,10 +122,14 @@ export default function StudentAddForm() {
       newErrors.name = "Name must be 4–30 letters only";
     }
 
-    if (!formData.last_name.trim()) {
-      newErrors.last_name = "Last name is required";
-    } else if (!/^[A-Za-z]{4,30}$/.test(formData.last_name)) {
-      newErrors.last_name = "Last name must be 4–30 letters only";
+    // if (!formData.last_name.trim()) {
+    //   newErrors.last_name = "Last name is required";
+    // } else if (!/^[A-Za-z]{4,30}$/.test(formData.last_name)) {
+    //   newErrors.last_name = "Last name must be 4–30 letters only";
+    // }
+
+    if (!formData.last_name) {
+      newErrors.last_name = "last Name is required";
     }
 
     if (!formData.dob) {
@@ -303,12 +305,22 @@ export default function StudentAddForm() {
                     value={formData.dob ? new Date(formData.dob) : undefined}
                     onChange={(date) => {
                       const selectedDate = Array.isArray(date) ? date[0] : date;
-                      setFormData({
-                        ...formData,
-                        dob: selectedDate
-                          ? selectedDate.toISOString().split("T")[0]
-                          : "",
-                      });
+
+                      if (selectedDate) {
+                        const year = selectedDate.getFullYear();
+                        const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+                        const day = String(selectedDate.getDate()).padStart(2, "0");
+
+                        setFormData({
+                          ...formData,
+                          dob: `${year}-${month}-${day}`, // ✅ Local date, no timezone shift
+                        });
+                      } else {
+                        setFormData({
+                          ...formData,
+                          dob: "",
+                        });
+                      }
                     }}
                   />
                   {errors.dob && (
@@ -316,6 +328,7 @@ export default function StudentAddForm() {
                   )}
                 </div>
               </div>
+
 
 
               <div className="space-y-6">
@@ -629,10 +642,20 @@ export default function StudentAddForm() {
                   label="Join Date"
                   placeholder="Select a date"
                   minDate={new Date()}
+                  value={
+                    formData.join_date && !isNaN(Date.parse(formData.join_date))
+                      ? new Date(formData.join_date)
+                      : undefined
+                  }
                   onChange={(date) => {
                     const selectedDate = Array.isArray(date) ? date[0] : date;
                     if (selectedDate instanceof Date && !isNaN(selectedDate.getTime())) {
-                      const formattedDate = selectedDate.toISOString().split("T")[0];
+                      // Format date in local timezone (YYYY-MM-DD)
+                      const year = selectedDate.getFullYear();
+                      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+                      const day = String(selectedDate.getDate()).padStart(2, "0");
+                      const formattedDate = `${year}-${month}-${day}`;
+
                       setFormData((prev) => ({
                         ...prev,
                         join_date: formattedDate,
@@ -646,26 +669,40 @@ export default function StudentAddForm() {
                 )}
               </div>
 
+
               <div className="space-y-2">
                 <DatePicker
                   id="end-date-picker"
                   label="End Date"
                   placeholder="Select a date"
-                  minDate={new Date()} 
+                  minDate={new Date()}
+                  value={
+                    formData.end_date && !isNaN(Date.parse(formData.end_date))
+                      ? new Date(formData.end_date)
+                      : undefined
+                  }
                   onChange={(date) => {
                     const selectedDate = Array.isArray(date) ? date[0] : date;
-                    const formattedDate = selectedDate ? selectedDate.toISOString().split("T")[0] : "";
-                    setFormData((prev) => ({
-                      ...prev,
-                      end_date: formattedDate,
-                    }));
-                    setErrors((prev) => ({ ...prev, end_date: "" })); // clear error
+                    if (selectedDate instanceof Date && !isNaN(selectedDate.getTime())) {
+                      // Format in local time (YYYY-MM-DD)
+                      const year = selectedDate.getFullYear();
+                      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+                      const day = String(selectedDate.getDate()).padStart(2, "0");
+                      const formattedDate = `${year}-${month}-${day}`;
+
+                      setFormData((prev) => ({
+                        ...prev,
+                        end_date: formattedDate,
+                      }));
+                      setErrors((prev) => ({ ...prev, end_date: "" })); // clear error
+                    }
                   }}
                 />
                 {errors.end_date && (
                   <p className="text-red-500 text-sm">{errors.end_date}</p>
                 )}
               </div>
+
 
             </div>
 
@@ -798,7 +835,6 @@ type CustomDropdownProps<T extends string> = {
   onSelect?: (value: T) => void;
   classsName?: string;
 };
-
 
 function CustomDropdown<T extends string>({
   label = "Select",

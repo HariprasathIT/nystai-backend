@@ -6,14 +6,14 @@ export const validateStudent = [
     body('name')
         .trim()
         .notEmpty().withMessage('Name is required')
-        .isLength({ min: 4, max: 30 }).withMessage('Name must be between 4 and 30 characters')
-        .isAlpha().withMessage('Name must contain only letters'),
+        .isLength({ min: 4, max: 50 }).withMessage('First name must be between 4 and 50 characters')
+        .isAlpha().withMessage('Name must contain only letters')    ,
 
     body('last_name')
         .trim()
         .notEmpty().withMessage('Last name is required')
-        .isLength({ min: 4, max: 30 }).withMessage('Last name must be between 4 and 30 characters')
-        .isAlpha().withMessage('Last name must contain only letters'),
+        .isLength({ max: 4 }).withMessage("Last name must be at most 4 characters long")
+        .matches(/^[A-Za-z\s]+$/).withMessage("Last name must contain only in letters"),
 
     body('dob')
         .trim()
@@ -44,8 +44,7 @@ export const validateStudent = [
     body('gender')
         .trim()
         .notEmpty().withMessage('Gender is required')
-        .isIn(['Male', 'Female', 'Other']).withMessage('Invalid gender option')
-        .notEmpty().withMessage('Gender is required'),
+        .isIn(['Male', 'Female', 'Other']).withMessage('Invalid gender option'),
 
     body('email')
         .trim()
