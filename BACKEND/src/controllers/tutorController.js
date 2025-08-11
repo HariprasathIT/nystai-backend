@@ -144,23 +144,9 @@ export const updatetutor = async (req, res, next) => {
 
 
 // This is for get all tutors
-// export const getalltutors = async (req, res, next) => {
-//   try {
-//     const result = await db.query("SELECT * FROM nystai_tutors ORDER BY tutor_id DESC");
-//     res.status(200).json({
-//       message: "All tutors fetched successfully",
-//       tutors: result.rows,
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-
 export const getalltutors = async (req, res, next) => {
   try {
-    const result = await db.query(`
-      
-      `);
+    const result = await db.query("SELECT * FROM nystai_tutors ORDER BY tutor_id DESC");
     res.status(200).json({
       message: "All tutors fetched successfully",
       tutors: result.rows,
