@@ -44,34 +44,51 @@ export const tutorUpdateValidator = [
             }
             return true;
         })
-        .custom(async (value, { req }) => {
-            const { id } = req.params;
-            const result = await db.query("SELECT * FROM nystai_tutors WHERE email = $1 AND tutor_id != $2", [value, id]);
-            if (result.rows.length > 0) {
-                throw new Error("Email already exists");
-            }
-            return true;
-        }),
-
+    // .custom(async (value, { req }) => {
+    //     const { id } = req.params;
+    //     const result = await db.query("SELECT * FROM nystai_tutors WHERE email = $1 AND tutor_id != $2", [value, id]);
+    //     if (result.rows.length > 0) {
+    //         throw new Error("Email already exists");
+    //     }
+    //     return true;
+    // })
+    ,
     body("phone")
         .notEmpty().withMessage("Phone number is required")
         .isMobilePhone("en-IN").withMessage("Invalid phone number")
         .matches(/^[6-9]\d{9}$/).withMessage('Invalid phone number, Phone number must be 10 digits, starting with 6-9')
-        .custom(async (value, { req }) => {
-            const { id } = req.params;
-            const result = await db.query("SELECT * FROM nystai_tutors WHERE phone = $1 AND tutor_id != $2", [value, id]);
-            if (result.rows.length > 0) {
-                throw new Error("Phone number already exists");
-            }
-            return true;
-        }),
+    // .custom(async (value, { req }) => {
+    //     const { id } = req.params;
+    //     const result = await db.query("SELECT * FROM nystai_tutors WHERE phone = $1 AND tutor_id != $2", [value, id]);
+    //     if (result.rows.length > 0) {
+    //         throw new Error("Phone number already exists");
+    //     }
+    //     return true;
+    // })
+    ,
 
     body("expertise").notEmpty().withMessage("Expertise / Courses is required"),
 
     body("experience_years")
         .notEmpty().withMessage("Experience is required"),
 
-    body("joining_date").notEmpty().withMessage("Joining date is required"),
+    body("joining_date")
+        .notEmpty().withMessage("Joining date is required")
+        .custom((value) => {
+            const inputDate = new Date(value);
+            const today = new Date();
+
+            // Remove time to compare only date
+            inputDate.setHours(0, 0, 0, 0);
+            today.setHours(0, 0, 0, 0);
+
+            if (inputDate.getTime() !== today.getTime()) {
+                throw new Error("Joining date must be today");
+            }
+
+            return true;
+        })
+
 ];
 
 
@@ -88,24 +105,24 @@ export const handleUpdateTutorValidation = (req, res, next) => {
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'];
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only image files are allowed (jpeg, png, webp, gif, jpg)'));
-  }
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'];
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Only image files are allowed (jpeg, png, webp, gif, jpg)'));
+    }
 };
 
 export const uploadImageTutor = multer({
-  storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
-  fileFilter
+    storage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+    fileFilter
 });
 
 
 export const checkTutorImageRequired = (req, res, next) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "Tutor image is required" });
-  }
-  next();
+    if (!req.file) {
+        return res.status(400).json({ error: "Tutor image is required" });
+    }
+    next();
 };
