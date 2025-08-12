@@ -1,6 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 // other imports...
+
+import blobRoutes from './src/routes/blobRoutes.js';
+import errorHandler from './src/middleware/errorHandler.js';
+import authRoutes from './src/routes/authRoutes.js';
+import Nystaicoursesroutes from './src/routes/Nystaicoursesroutes.js';
+import pricingPlanRoutes from './src/routes/Pricingroutes.js';
+import tutorRoutes from './src/routes/tutorRoutes.js';
+import StudentTasks from './src/routes/assignTaskroutes.js'
  
 const app = express();
  
