@@ -29,22 +29,8 @@ export const validateInsertCourseInput = [
 export const handleInsertValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
 
-  const fields = {};
-  Object.keys(req.body).forEach(key => {
-    fields[key] = { success: true, msg: "" };
-  });
-
   if (!errors.isEmpty()) {
-    errors.array().forEach(err => {
-      if (fields[err.path] !== undefined) {
-        fields[err.path] = { success: false, msg: err.msg };
-      }
-    });
-
-    return res.status(400).json({
-      success: false,
-      fields
-    });
+    return res.status(400).json({ errors: errors.array() });
   }
 
   next();
