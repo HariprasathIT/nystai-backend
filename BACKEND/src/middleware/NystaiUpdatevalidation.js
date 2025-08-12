@@ -10,7 +10,7 @@ export const validateUpdateCourseInput = [
     body('course_duration')
         .trim()
         .notEmpty().withMessage('Course duration is required')
-        .isInt({ min: 1, max: 12 }).withMessage('Course duration must be a number between 1 and 12'),
+        .isInt({ min: 1, max: 365 }).withMessage('Course duration must be a number between 1 and 365'),
 
     body('card_overview')
         .trim()

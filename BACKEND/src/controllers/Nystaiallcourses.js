@@ -49,16 +49,26 @@ export const Addingcourses = async (req, res, next) => {
 };
 
 
-
 // Fetching all courses from the database
 // This function retrieves all courses and their details from the database
 export const getAllCourses = async (req, res, next) => {
   try {
     const result = await db.query(`SELECT * FROM nystaiallcourses ORDER BY id DESC`);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No courses found',
+        data: [],
+      });
+    }
+
     res.status(200).json({
+      success: true,
       message: 'Courses fetched successfully',
       data: result.rows,
     });
+
   } catch (err) {
     next(err);
   }
@@ -66,23 +76,37 @@ export const getAllCourses = async (req, res, next) => {
 
 
 // Deleting a course from the database
-// This function handles the deletion of a course by its ID
 export const deleteCourse = async (req, res, next) => {
   const { id } = req.params;
 
   try {
     // Check if course exists
-    const course = await db.query(`SELECT * FROM nystaiallcourses WHERE id = $1`, [id]);
+    const course = await pool.query(
+      "SELECT * FROM nystaiallcourses WHERE id = $1",
+      [id]
+    );
+
     if (course.rows.length === 0) {
-      return res.status(404).json({ message: 'Course not found' });
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
     }
 
     // Delete course
-    await db.query(`DELETE FROM nystaiallcourses WHERE id = $1`, [id]);
+    await pool.query("DELETE FROM nystaiallcourses WHERE id = $1", [id]);
 
-    res.status(200).json({ message: 'Course deleted successfully' });
+    return res.status(200).json({
+      success: true,
+      message: "Course deleted successfully",
+    });
   } catch (err) {
-    next(err);
+    return next({
+      status: 500,
+      success: false,
+      message: "Error deleting course",
+      details: err.message,
+    });
   }
 };
 
@@ -134,19 +158,29 @@ export const updateCourse = async (req, res, next) => {
 
 
 // Getting a Single Course
-// This function Gets a Single Courses by their Own id
-export const getSingleCourse = async (req, res) => {
+// This function Gets a Single Course by its own id
+export const getSingleCourse = async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    const result = await pool.query("SELECT * FROM nystaiallcourses WHERE id = $1", [id]);
+    const result = await pool.query(
+      "SELECT * FROM nystaiallcourses WHERE id = $1",
+      [id]
+    );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Course not found"
+      });
     }
 
-    return res.status(200).json(result.rows[0]);
+    return res.status(200).json({
+      success: true,
+      message: "Course fetched successfully",
+      data: result.rows[0],
+    });
   } catch (err) {
-    return res.status(500).json({ message: "Error retrieving course", error: err.message });
+    next(err); // Let your error middleware handle it
   }
 };
