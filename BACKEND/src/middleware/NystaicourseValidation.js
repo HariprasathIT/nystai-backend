@@ -26,14 +26,40 @@ export const validateInsertCourseInput = [
 
 
 
+// export const handleInsertValidationErrors = (req, res, next) => {
+//   const errors = validationResult(req);
+
+//   if (!errors.isEmpty()) {
+//     return res.status(400).json({ errors: errors.array() });
+//   }
+
+//   next();
+// };
+
+
 export const handleInsertValidationErrors = (req, res, next) => {
-  const errors = validationResult(req);
+    const errors = validationResult(req);
 
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
+    // Build default structure from body keys
+    const fields = {};
+    Object.keys(req.body).forEach(key => {
+        fields[key] = { success: true, msg: "" };
+    });
 
-  next();
+    if (!errors.isEmpty()) {
+        errors.array().forEach(err => {
+            if (fields[err.path] !== undefined) {
+                fields[err.path] = { success: false, msg: err.msg };
+            }
+        });
+
+        return res.status(400).json({
+            success: false,
+            fields
+        });
+    }
+
+    next();
 };
 
 
