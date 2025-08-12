@@ -101,7 +101,7 @@ export const deleteCourse = async (req, res, next) => {
     if (course.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Course not found",
+        message: `No course found with ID ${id}`,
       });
     }
 
@@ -133,6 +133,7 @@ export const updateCourse = async (req, res, next) => {
   try {
     let imageUrl;
 
+    // Upload image if file exists
     if (file) {
       const blob = await put(`NystaicoursesImages/${file.originalname}`, file.buffer, {
         access: 'public',
@@ -142,6 +143,7 @@ export const updateCourse = async (req, res, next) => {
       imageUrl = blob.url;
     }
 
+    // Build query dynamically
     const query = `
       UPDATE nystaiallcourses
       SET 
@@ -159,7 +161,17 @@ export const updateCourse = async (req, res, next) => {
 
     const result = await db.query(query, values);
 
+    // If no course found
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No course found with ID ${id}`
+      });
+    }
+
+    // Success
     res.status(200).json({
+      success: true,
       message: 'Course updated successfully',
       data: result.rows[0]
     });
@@ -169,16 +181,42 @@ export const updateCourse = async (req, res, next) => {
 };
 
 
+
 // Getting a Single Course
 // This function Gets a Single Course by its own id
-export const getSingleCourse = async (req, res, next) => {
+// export const getSingleCourse = async (req, res, next) => {
+//   const { id } = req.params;
+
+//   try {
+//     const result = await pool.query(
+//       "SELECT * FROM nystaiallcourses WHERE id = $1",
+//       [id]
+//     );
+
+//     if (result.rows.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Course not found"
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Course fetched successfully",
+//       data: result.rows[0],
+//     });
+//   } catch (err) {
+//     next(err); // Let your error middleware handle it
+//   }
+// };
+
+// Getting a Single Course
+// This function Gets a Single Courses by their Own id
+export const getSingleCourse = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await pool.query(
-      "SELECT * FROM nystaiallcourses WHERE id = $1",
-      [id]
-    );
+    const result = await pool.query("SELECT * FROM nystaiallcourses WHERE id = $1", [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -193,6 +231,6 @@ export const getSingleCourse = async (req, res, next) => {
       data: result.rows[0],
     });
   } catch (err) {
-    next(err); // Let your error middleware handle it
+    next(err);
   }
 };
