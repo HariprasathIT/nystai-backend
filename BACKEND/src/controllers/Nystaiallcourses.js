@@ -156,7 +156,7 @@ export const getSingleCourse = async (req, res) => {
   try {
     const result = await pool.query(
       "SELECT * FROM nystaiallcourses WHERE id = $1",
-      [id]
+      [parseInt(id)]
     );
 
     if (result.rows.length === 0) {
