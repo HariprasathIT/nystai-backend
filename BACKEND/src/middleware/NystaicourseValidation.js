@@ -24,6 +24,8 @@ export const validateInsertCourseInput = [
     })
 ];
 
+
+
 export const handleInsertValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
 
@@ -52,7 +54,6 @@ export const handleInsertValidationErrors = (req, res, next) => {
 
   next();
 };
-
 
 
 
