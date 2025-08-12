@@ -10,7 +10,13 @@ export const Addingcourses = async (req, res, next) => {
   const file = req.file;
 
   try {
-    if (!file) throw new Error('Image file is required');
+
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image file is required'
+      });
+    }
 
     // Check if the same course already exists
     const checkQuery = `
@@ -21,7 +27,8 @@ export const Addingcourses = async (req, res, next) => {
 
     if (existing.rows.length > 0) {
       return res.status(400).json({
-        message: 'This Course is already exists'
+        success: false,
+        message: 'This Course already exists'
       });
     }
 
@@ -40,11 +47,16 @@ export const Addingcourses = async (req, res, next) => {
     );
 
     res.status(201).json({
+      success: true,
       message: 'Course added successfully',
       data: result.rows[0]
     });
   } catch (err) {
-    next(err);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding course',
+      error: err.message
+    });
   }
 };
 
