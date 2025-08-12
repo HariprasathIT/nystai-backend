@@ -10,7 +10,12 @@ export const Addingcourses = async (req, res, next) => {
   const file = req.file;
 
   try {
-    if (!file) throw new Error('Image file is required');
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: "Image file is required"
+      });
+    }
 
     // Check if the same course already exists
     const checkQuery = `
@@ -54,9 +59,21 @@ export const Addingcourses = async (req, res, next) => {
 // This function retrieves all courses and their details from the database
 export const getAllCourses = async (req, res, next) => {
   try {
-    const result = await db.query(`SELECT * FROM nystaiallcourses ORDER BY id DESC`);
+    const result = await db.query(
+      `SELECT * FROM nystaiallcourses ORDER BY id DESC`
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No courses found",
+        data: [],
+      });
+    }
+
     res.status(200).json({
-      message: 'Courses fetched successfully',
+      success: true,
+      message: "Courses fetched successfully",
       data: result.rows,
     });
   } catch (err) {
@@ -95,17 +112,45 @@ export const updateCourse = async (req, res, next) => {
   const file = req.file;
 
   try {
-    let imageUrl;
+    // 1️⃣ Check if ID exists
+    const existing = await db.query(
+      "SELECT * FROM nystaiallcourses WHERE id = $1",
+      [id]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
 
+    // 2️⃣ Validation for required fields
+    if (!course_name || !course_duration || !card_overview) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields (course_name, course_duration, card_overview) are required",
+      });
+    }
+
+    // 3️⃣ Validation for required image (if you want it to be mandatory)
+    if (!file && !existing.rows[0].image_url) {
+      return res.status(400).json({
+        success: false,
+        message: "Image file is required",
+      });
+    }
+
+    let imageUrl;
     if (file) {
       const blob = await put(`NystaicoursesImages/${file.originalname}`, file.buffer, {
-        access: 'public',
+        access: "public",
         token: process.env.VERCEL_BLOB_RW_TOKEN,
-        addRandomSuffix: true
+        addRandomSuffix: true,
       });
       imageUrl = blob.url;
     }
 
+    // 4️⃣ Update course
     const query = `
       UPDATE nystaiallcourses
       SET 
@@ -124,8 +169,9 @@ export const updateCourse = async (req, res, next) => {
     const result = await db.query(query, values);
 
     res.status(200).json({
-      message: 'Course updated successfully',
-      data: result.rows[0]
+      success: true,
+      message: "Course updated successfully",
+      data: result.rows[0],
     });
   } catch (err) {
     next(err);
@@ -133,20 +179,32 @@ export const updateCourse = async (req, res, next) => {
 };
 
 
+
 // Getting a Single Course
 // This function Gets a Single Courses by their Own id
-export const getSingleCourse = async (req, res) => {
+export const getSingleCourse = async (req, res, next) => {
   const { id } = req.params;
 
   try {
-    const result = await pool.query("SELECT * FROM nystaiallcourses WHERE id = $1", [id]);
+    const result = await db.query(
+      "SELECT * FROM nystaiallcourses WHERE id = $1",
+      [id]
+    );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+        data: null,
+      });
     }
 
-    return res.status(200).json(result.rows[0]);
+    res.status(200).json({
+      success: true,
+      message: "Course fetched successfully",
+      data: result.rows[0],
+    });
   } catch (err) {
-    return res.status(500).json({ message: "Error retrieving course", error: err.message });
+    next(err);
   }
 };
