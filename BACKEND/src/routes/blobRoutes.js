@@ -8,10 +8,10 @@ const router = express.Router();
 
 //  Insert student route with multiple file uploads
 router.post('/insert-student',
-    uploadFields,           //  handle passport_photo, pan_card, aadhar_card, sslc_marksheet
-    validateStudent,        //  express-validator middlewares
+    uploadFields,
+    validateStudent,
     handleValidationstudentInsert,
-    insertStudentWithProof   //  Final controller to save student and upload files
+    insertStudentWithProof  
 );
 
 //  Get all students

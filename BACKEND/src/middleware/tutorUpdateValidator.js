@@ -94,11 +94,38 @@ export const tutorUpdateValidator = [
 
 export const handleUpdateTutorValidation = (req, res, next) => {
     const errors = validationResult(req);
+
+    // ✅ All fields that we validate
+    const fieldNames = [
+        "first_name",
+        "last_name",
+        "dob",
+        "gender",
+        "email",
+        "phone",
+        "expertise",
+        "experience_years",
+        "joining_date"
+    ];
+
+    // ✅ Initialize all as success
+    const fields = Object.fromEntries(
+        fieldNames.map(name => [name, { success: true, msg: "" }])
+    );
+
+    // ❌ Mark the failed fields
+    errors.array().forEach(err => {
+        fields[err.path] = { success: false, msg: err.msg };
+    });
+
+    // 📌 If there are any validation errors
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ success: false, fields });
     }
+
     next();
 };
+
 
 // This is for Uploading Tutor Image Validation
 
@@ -122,7 +149,10 @@ export const uploadImageTutor = multer({
 
 export const checkTutorImageRequired = (req, res, next) => {
     if (!req.file) {
-        return res.status(400).json({ error: "Tutor image is required" });
+        return res.status(400).json({
+            success: false,
+            detail: "Tutor Image is required"
+        });
     }
     next();
 };

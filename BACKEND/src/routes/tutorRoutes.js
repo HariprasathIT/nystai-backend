@@ -13,7 +13,7 @@ const router = express.Router();
 router.post("/addtutor", uploadImageTutor.single("tutor_image"), checkTutorImageRequired, tutorInputValidator, handleInputTutorValidation, addtutor);
 
 // Update single tutor
-router.put("/updatetutor/:id", uploadImageTutor.single("tutor_image"), checkTutorImageRequired, tutorUpdateValidator, handleUpdateTutorValidation, updatetutor);
+router.put("/updatetutor/:id", uploadImageTutor.single("tutor_image"), tutorUpdateValidator, handleUpdateTutorValidation, updatetutor);
 
 // Get all tutors
 router.get("/getalltutors", getalltutors);

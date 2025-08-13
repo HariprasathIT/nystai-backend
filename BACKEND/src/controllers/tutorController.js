@@ -18,7 +18,6 @@ export const addtutor = async (req, res, next) => {
   const file = req.file;
 
   try {
-    if (!file) throw new Error('Image file is required');
     // 🔐 Check for duplicates
     const existing = await db.query(
       "SELECT * FROM nystai_tutors WHERE email = $1 OR phone = $2",
@@ -87,7 +86,10 @@ export const updatetutor = async (req, res, next) => {
     // Check if tutor exists
     const existingTutor = await db.query("SELECT * FROM nystai_tutors WHERE tutor_id = $1", [id]);
     if (existingTutor.rows.length === 0) {
-      return res.status(404).json({ error: "Tutor not found" });
+      return res.status(404).json({
+        success: false,
+        error: "Tutor not found"
+      });
     }
 
     let tutorImageUrl = existingTutor.rows[0].tutor_image;
@@ -133,6 +135,7 @@ export const updatetutor = async (req, res, next) => {
     );
 
     res.status(200).json({
+      success: true,
       message: "Tutor updated successfully",
       updatedTutor: result.rows[0],
     });
@@ -148,6 +151,7 @@ export const getalltutors = async (req, res, next) => {
   try {
     const result = await db.query("SELECT * FROM nystai_tutors ORDER BY tutor_id DESC");
     res.status(200).json({
+      success: true,
       message: "All tutors fetched successfully",
       tutors: result.rows,
     });
@@ -165,10 +169,14 @@ export const getsingletutor = async (req, res, next) => {
     const result = await db.query("SELECT * FROM nystai_tutors WHERE tutor_id = $1", [id]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Tutor not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Tutor not found"
+      });
     }
 
     res.status(200).json({
+      success: true,
       message: "Tutor fetched successfully",
       tutor: result.rows[0],
     });
@@ -186,10 +194,14 @@ export const deletetutor = async (req, res, next) => {
     const result = await db.query("DELETE FROM nystai_tutors WHERE tutor_id = $1 RETURNING *", [id]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Tutor not found or already deleted" });
+      return res.status(404).json({
+        success: false,
+        message: "Tutor not found"
+      });
     }
 
     res.status(200).json({
+      success: true,
       message: "Tutor deleted successfully",
       deletedTutor: result.rows[0],
     });

@@ -13,7 +13,6 @@ export const Addingcourses = async (req, res, next) => {
     if (!file) {
       return res.status(400).json({
         success: false,
-        error: "Something went wrong",
         detail: "Image file is required"
       });
     }
