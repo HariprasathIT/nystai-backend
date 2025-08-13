@@ -10,8 +10,8 @@ export const validateUpdateStudentCourse = [
 
   body('last_name')
     .trim()
-    .isLength({ min: 4, max: 30 }).withMessage('Last name must be between 4 and 30 characters')
-    .isAlpha().withMessage('Last name must contain only letters'),
+    .isLength({ max: 4 }).withMessage("Last name must be at most 4 characters long")
+    .matches(/^[A-Za-z\s]+$/).withMessage("Last name must contain only in letters"),
 
   body('dob')
     .trim()

@@ -1,5 +1,6 @@
 import { body } from 'express-validator';
 import pool from '../config/db.js';
+import { validationResult } from 'express-validator';
 
 export const validateStudent = [
 
@@ -182,3 +183,16 @@ export const validateStudent = [
 
 
 ];
+
+
+
+
+
+
+export const handleValidationstudentInsert = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+  return res.status(200).json({ success: true, message: 'Validation passed' });
+};

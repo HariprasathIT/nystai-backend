@@ -10,7 +10,13 @@ export const Addingcourses = async (req, res, next) => {
   const file = req.file;
 
   try {
-    if (!file) throw new Error('Image file is required');
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        error: "Something went wrong",
+        detail: "Image file is required"
+      });
+    }
 
     // Check if the same course already exists
     const checkQuery = `
@@ -21,6 +27,7 @@ export const Addingcourses = async (req, res, next) => {
 
     if (existing.rows.length > 0) {
       return res.status(400).json({
+        success: false,
         message: 'This Course is already exists'
       });
     }
@@ -40,13 +47,15 @@ export const Addingcourses = async (req, res, next) => {
     );
 
     res.status(201).json({
+      success: true,
       message: 'Course added successfully',
-      data: result.rows[0]
+      data: result.rows
     });
   } catch (err) {
     next(err);
   }
 };
+
 
 
 
@@ -55,14 +64,17 @@ export const Addingcourses = async (req, res, next) => {
 export const getAllCourses = async (req, res, next) => {
   try {
     const result = await db.query(`SELECT * FROM nystaiallcourses ORDER BY id DESC`);
+
     res.status(200).json({
+      success: true,
       message: 'Courses fetched successfully',
-      data: result.rows,
+      data: result.rows
     });
   } catch (err) {
     next(err);
   }
 };
+
 
 
 // Deleting a course from the database
@@ -74,17 +86,18 @@ export const deleteCourse = async (req, res, next) => {
     // Check if course exists
     const course = await db.query(`SELECT * FROM nystaiallcourses WHERE id = $1`, [id]);
     if (course.rows.length === 0) {
-      return res.status(404).json({ message: 'Course not found' });
+      return res.status(404).json({ success: false, message: 'Course not found' });
     }
 
     // Delete course
     await db.query(`DELETE FROM nystaiallcourses WHERE id = $1`, [id]);
 
-    res.status(200).json({ message: 'Course deleted successfully' });
+    res.status(200).json({ success: true, message: 'Course deleted successfully' });
   } catch (err) {
     next(err);
   }
 };
+
 
 
 // Update a course by ID
@@ -124,13 +137,15 @@ export const updateCourse = async (req, res, next) => {
     const result = await db.query(query, values);
 
     res.status(200).json({
+      success: true,
       message: 'Course updated successfully',
-      data: result.rows[0]
+      data: result.rows
     });
   } catch (err) {
     next(err);
   }
 };
+
 
 
 // Getting a Single Course
@@ -139,14 +154,29 @@ export const getSingleCourse = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await pool.query("SELECT * FROM nystaiallcourses WHERE id = $1", [id]);
+    const result = await pool.query(
+      "SELECT * FROM nystaiallcourses WHERE id = $1",
+      [parseInt(id)]
+    );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Course not found"
+      });
     }
 
-    return res.status(200).json(result.rows[0]);
+    return res.status(200).json({
+      success: true,
+      message: "Course retrieved successfully",
+      data: result.rows
+    });
   } catch (err) {
-    return res.status(500).json({ message: "Error retrieving course", error: err.message });
+    return res.status(500).json({
+      success: false,
+      message: "Error retrieving course",
+      error: err.message
+    });
   }
 };
+

@@ -1,8 +1,8 @@
 import express from 'express';
-import { uploadFields, validateUploadedFiles } from '../middleware/uploadMiddleware.js';
+import { uploadFields } from '../middleware/uploadMiddleware.js';
 import { deleteStudent, getAllStudents, getStudentById, insertStudentWithProof, updateStudentWithProof } from '../controllers/blobController.js';
-import { validateStudent } from '../middleware/validateStudent.js';
-import { validationResult } from 'express-validator';
+import { handleValidationstudentInsert, validateStudent } from '../middleware/validateStudent.js';
+
 
 const router = express.Router();
 
@@ -10,14 +10,7 @@ const router = express.Router();
 router.post('/insert-student',
     uploadFields,           //  handle passport_photo, pan_card, aadhar_card, sslc_marksheet
     validateStudent,        //  express-validator middlewares
-    validateUploadedFiles, 
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-        next();
-    },
+    handleValidationstudentInsert,
     insertStudentWithProof   //  Final controller to save student and upload files
 );
 
