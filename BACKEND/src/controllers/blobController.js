@@ -41,7 +41,10 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
         //  Check required files
         for (const doc of requiredDocs) {
             if (!files[doc] || !files[doc][0]) {
-                return res.status(400).json({ error: `${doc} is missing` });
+                return res.status(400).json({
+                    success: false,
+                    error: `${doc} is missing`
+                });
             }
         }
 
@@ -141,6 +144,7 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
         //  Commit and respond
         await client.query('COMMIT');
         res.status(201).json({
+            success: true,
             message: 'Student inserted successfully',
             student_id: studentId,
             student_register_number: studentRegisterNumber
@@ -149,7 +153,10 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error(error);
-        res.status(500).json({ error: 'Insert failed', detail: error.message });
+        res.status(500).json({
+            success: false,
+            error: 'Insert failed', detail: error.message
+        });
     } finally {
         client.release();
     }
@@ -181,7 +188,13 @@ export const getAllStudents = async (req, res, next) => {
       LEFT JOIN student_proof_documents spd ON spi.student_id = spd.student_id
       LEFT JOIN studentsuniqueqrcode suq ON spi.student_id = suq.student_id;
     `);
-        res.status(200).json(result.rows);
+
+        res.status(200).json({
+            success: true,
+            message: "Students fetched successfully",
+            data: result.rows
+        });
+
     } catch (err) {
         next(err);
     }
@@ -195,16 +208,29 @@ export const deleteStudent = async (req, res) => {
 
     try {
         const check = await client.query('SELECT * FROM studentspersonalinformation WHERE student_id = $1', [id]);
+
         if (check.rowCount === 0) {
-            return res.status(404).json({ error: 'Student not found' });
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
         }
 
         await client.query('DELETE FROM studentspersonalinformation WHERE student_id = $1', [id]);
 
-        res.status(200).json({ message: 'Student deleted successfully' });
+        res.status(200).json({
+            success: true,
+            message: 'Student deleted successfully'
+        });
+
     } catch (error) {
-        console.error('Delete error:', error.message);
-        res.status(500).json({ error: 'Delete failed', detail: error.message });
+
+        res.status(500).json({
+            success: false,
+            message: 'Delete failed',
+            detail: error.message
+        });
+
     } finally {
         client.release();
     }
@@ -234,16 +260,27 @@ export const getStudentById = async (req, res) => {
         const result = await client.query(query, [student_id]);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Student not found' });
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
         }
 
-        res.status(200).json({ data: result.rows[0] });
+        res.status(200).json({
+            success: true,
+            message: 'Student retrieved successfully',
+            data: result.rows[0]
+        });
+
     } catch (err) {
         console.error(err);
+
         res.status(500).json({
-            error: 'Failed to fetch student',
+            success: false,
+            message: 'Failed to fetch student',
             detail: err.message,
         });
+        
     } finally {
         client.release();
     }
@@ -281,7 +318,7 @@ export const updateStudentWithProof = async (req, res) => {
             course_enrolled,
             batch,
             tutor,
-            certificate_status //  New field expected
+            certificate_status
         } = req.body || {};
 
         const files = req.files;
@@ -367,9 +404,7 @@ export const updateStudentWithProof = async (req, res) => {
             );
         }
 
-        //  QR CODE: Only generate if certificate is "completed"
         if (certificate_status === 'completed') {
-            // Get register number
             const regResult = await client.query(
                 'SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1',
                 [student_id]
@@ -379,27 +414,42 @@ export const updateStudentWithProof = async (req, res) => {
 
             if (studentRegisterNumber) {
                 const qrUrl = await generateAndUploadQR(studentRegisterNumber, student_id);
-
-                // Update QR URL
                 await client.query(
                     'UPDATE studentsuniqueqrcode SET certificate_status = $1, student_qr_url = $2 WHERE student_id = $3',
                     ['completed', qrUrl, student_id]
                 );
-
             }
         }
 
         await client.query('COMMIT');
 
+        // ✅ Fetch updated student details and remove unwanted fields
+        const updated = await client.query(
+            `SELECT spi.*, scd.*, spd.*, suq.*
+             FROM studentspersonalinformation spi
+             LEFT JOIN studentcoursedetails scd ON spi.student_id = scd.student_id
+             LEFT JOIN student_proof_documents spd ON spi.student_id = spd.student_id
+             LEFT JOIN studentsuniqueqrcode suq ON spi.student_id = suq.student_id
+             WHERE spi.student_id = $1`,
+            [student_id]
+        );
+
+        const { course_id, id, qr_id, ...filteredData } = updated.rows[0] || {};
+
         res.status(200).json({
+            success: true,
             message: 'Student updated successfully',
-            student_id: student_id
+            data: filteredData
         });
 
     } catch (error) {
         await client.query('ROLLBACK');
         console.error(error);
-        res.status(500).json({ error: 'Update failed', detail: error.message });
+        res.status(500).json({
+            success: false,
+            error: 'Update failed',
+            detail: error.message
+        });
     } finally {
         client.release();
     }

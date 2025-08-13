@@ -6,19 +6,19 @@ export const validateStudent = [
 
     body('name')
         .trim()
-        .notEmpty().withMessage('Name is required')
+        .notEmpty().withMessage('Name is required').bail()
         .isLength({ min: 4, max: 50 }).withMessage('First name must be between 4 and 50 characters')
-        .isAlpha().withMessage('Name must contain only letters')    ,
+        .isAlpha().withMessage('Name must contain only letters'),
 
     body('last_name')
         .trim()
-        .notEmpty().withMessage('Last name is required')
+        .notEmpty().withMessage('Last name is required').bail()
         .isLength({ max: 4 }).withMessage("Last name must be at most 4 characters long")
         .matches(/^[A-Za-z\s]+$/).withMessage("Last name must contain only in letters"),
 
     body('dob')
         .trim()
-        .notEmpty().withMessage('Date of birth is required')
+        .notEmpty().withMessage('Date of birth is required').bail()
         .custom((value) => {
             const parsedDate = Date.parse(value);
             if (isNaN(parsedDate)) {
@@ -44,12 +44,12 @@ export const validateStudent = [
 
     body('gender')
         .trim()
-        .notEmpty().withMessage('Gender is required')
+        .notEmpty().withMessage('Gender is required').bail()
         .isIn(['Male', 'Female', 'Other']).withMessage('Invalid gender option'),
 
     body('email')
         .trim()
-        .notEmpty().withMessage('Email is required')
+        .notEmpty().withMessage('Email is required').bail()
         .isEmail().withMessage('Invalid email address')
         .matches(/@(?:gmail\.com|yahoo\.com|outlook\.com|.+\.org)$/)
         .withMessage('Only gmail.com, yahoo.com, outlook.com, or .org emails are allowed')
@@ -66,7 +66,7 @@ export const validateStudent = [
 
     body('phone')
         .trim()
-        .notEmpty().withMessage('Phone number is required')
+        .notEmpty().withMessage('Phone number is required').bail()
         .matches(/^[6-9]\d{9}$/).withMessage('Invalid phone number,Phone Number must be 10 digits, starting with 6-9')
         .custom(async (value) => {
             const { rows } = await pool.query(
@@ -82,6 +82,7 @@ export const validateStudent = [
 
     body('alt_phone')
         .trim()
+        .notEmpty().withMessage('Phone number is required').bail()
         .matches(/^[6-9]\d{9}$/).withMessage('Invalid alternate phone number, must be 10 digits, starting with 6-9')
         .custom(async (value) => {
             const { rows } = await pool.query(
@@ -97,7 +98,7 @@ export const validateStudent = [
 
     body('aadhar_number')
         .trim()
-        .notEmpty().withMessage('Aadhar number is required')
+        .notEmpty().withMessage('Aadhar number is required').bail()
         .matches(/^\d{12}$/).withMessage('Aadhar must contain only 12 numeric digits')
         .isLength({ min: 12, max: 12 }).withMessage('Aadhar must be 12 digits')
         .custom(async (value) => {
@@ -110,7 +111,7 @@ export const validateStudent = [
 
     body('pan_number')
         .trim()
-        .notEmpty().withMessage('PAN number is required')
+        .notEmpty().withMessage('PAN number is required').bail()
         .optional()
         .isLength({ min: 10, max: 10 }).withMessage('PAN must be 10 characters')
         .custom(async (value) => {
@@ -122,63 +123,63 @@ export const validateStudent = [
         }),
 
     body('address')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Address is required'),
 
     body('pincode')
         .trim()
-        .notEmpty().withMessage('Pincode is required')
+        .notEmpty().withMessage('Pincode is required').bail()
         .matches(/^[1-9][0-9]{5}$/).withMessage('Pincode must be a 6-digit number starting from 1 to 9')
         .isLength({ min: 6, max: 6 }).withMessage('Pincode must be exactly 6 digits'),
 
     body('state')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('State is required'),
 
     // Course Info
     body('department')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Department is required'),
 
     body('course')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Course is required'),
 
     body('year_of_passed')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Year of passed is required'),
 
     body('experience')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Experience is required'),
 
     body('department_stream')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Department stream is required'),
 
     body('course_duration')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Course duration is required'),
 
     body('join_date')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Join date is required'),
 
     body('end_date')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('End date is required'),
 
     body('course_enrolled')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Course enrolled is required')
         .isIn(['IOT', 'CCTV']).withMessage('Course must be either IOT or CCTV'),
 
     body('batch')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Batch is required'),
 
     body('tutor')
-        .trim()
+        .trim().bail()
         .notEmpty().withMessage('Tutor is required'),
 
 
@@ -186,9 +187,48 @@ export const validateStudent = [
 
 
 export const handleValidationstudentInsert = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  next();
+    const errors = validationResult(req);
+
+    // All fields we expect
+    const expectedFields = [
+        "name",
+        "last_name",
+        "dob",
+        "gender",
+        "email",
+        "phone",
+        "alt_phone",
+        "aadhar_number",
+        "pan_number",
+        "address",
+        "pincode",
+        "state",
+        "department",
+        "course",
+        "year_of_passed",
+        "experience",
+        "department_stream",
+        "course_duration",
+        "join_date",
+        "end_date",
+        "course_enrolled",
+        "batch",
+        "tutor",
+    ];
+
+    // Initialize all as success
+    const fields = Object.fromEntries(
+        expectedFields.map(name => [name, { success: true, msg: "" }])
+    );
+
+    // Mark failed fields
+    errors.array().forEach(err => {
+        fields[err.path] = { success: false, msg: err.msg };
+    });
+
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, fields });
+    }
+
+    next();
 };

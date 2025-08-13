@@ -9,7 +9,7 @@ const router = express.Router();
 //  Insert student route with multiple file uploads
 router.post('/insert-student',
     uploadFields,
-    validateStudent,
+    validateStudent,        
     handleValidationstudentInsert,
     insertStudentWithProof  
 );
