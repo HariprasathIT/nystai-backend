@@ -75,9 +75,11 @@ export const getAllPricingPlans = async (req, res, next) => {
         const result = await db.query('SELECT * FROM nystai_pricing_plans ORDER BY id DESC');
 
         res.status(200).json({
+            success: true,
             message: 'Pricing plans fetched successfully',
             data: result.rows
         });
+
     } catch (err) {
         next(err);
     }
@@ -104,7 +106,10 @@ export const updatePricingPlan = async (req, res, next) => {
         const check = await db.query('SELECT * FROM nystai_pricing_plans WHERE id = $1', [id]);
 
         if (check.rows.length === 0) {
-            return res.status(404).json({ message: 'Pricing plan not found' });
+            return res.status(404).json({
+                success: false,
+                message: 'Pricing plan not found'
+            });
         }
 
         const result = await db.query(
@@ -134,10 +139,20 @@ export const updatePricingPlan = async (req, res, next) => {
             ]
         );
 
+        // If somehow nothing was updated
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Pricing plan not found'
+            });
+        }
+
         res.status(200).json({
+            success: true,
             message: 'Pricing plan updated successfully',
             data: result.rows[0]
         });
+
     } catch (err) {
         next(err);
     }
@@ -155,13 +170,20 @@ export const deletePricingPlan = async (req, res, next) => {
         const check = await db.query('SELECT * FROM nystai_pricing_plans WHERE id = $1', [id]);
 
         if (check.rows.length === 0) {
-            return res.status(404).json({ message: 'Pricing plan not found' });
+            return res.status(404).json({
+                success: false,
+                message: 'Pricing plan not found'
+            });
         }
 
         // Delete the plan
         await db.query('DELETE FROM nystai_pricing_plans WHERE id = $1', [id]);
 
-        res.status(200).json({ message: 'Pricing plan deleted successfully' });
+        res.status(200).json({
+            success: true,
+            message: 'Pricing plan deleted successfully'
+        });
+
     } catch (err) {
         next(err);
     }
@@ -177,13 +199,18 @@ export const getsingleplan = async (req, res, next) => {
         const result = await db.query("SELECT * FROM nystai_pricing_plans WHERE id = $1", [id]);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ message: "Plan not found" });
+            return res.status(404).json({
+                success: false,
+                message: "Plan not found"
+            });
         }
 
         res.status(200).json({
+            success: true,
             message: "Plan fetched successfully",
             plan: result.rows[0],
         });
+
     } catch (error) {
         next(error);
     }

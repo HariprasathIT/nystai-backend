@@ -4,7 +4,9 @@ import { validationResult } from 'express-validator';
 export const validateInputPricingPlan = [
   body('plan_name')
     .trim()
-    .notEmpty().withMessage('Plan name is required'),
+    .bail()
+    .notEmpty().withMessage('Plan name is required')
+    .matches(/^[a-zA-Z0-9\s]+$/).withMessage('Plan name must not contain special characters'),
 
   body('price')
     .trim()
@@ -37,9 +39,37 @@ export const validateInputPricingPlan = [
 
 export const handleInputPricingPlanValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
+
+  // ✅ Fields we validate
+  const fieldNames = [
+    "plan_name",
+    "price",
+    "point_1",
+    "point_2",
+    "point_3",
+    "point_4",
+    "point_5",
+    "point_6",
+    "point_7"
+  ];
+
+  // ✅ Initialize all fields as success
+  const fields = Object.fromEntries(
+    fieldNames.map(name => [name, { success: true, msg: "" }])
+  );
+
+  // ❌ Update fields that failed validation
+  errors.array().forEach(err => {
+    fields[err.path] = { success: false, msg: err.msg };
+  });
+
+  // 📌 If validation errors exist
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).json({
+      success: false,
+      fields
+    });
   }
+
   next();
 };
-
