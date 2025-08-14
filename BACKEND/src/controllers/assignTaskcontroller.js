@@ -2,7 +2,7 @@ import pool from "../config/db.js";
 import { sendBulkEmails } from "../utils/sendEmail.js";
 
 
-// This Function is for Creating a Task and Emailing Students
+// This Function is for Creating a Task, Emailing Students, and Tracking Email Status
 export const assignTaskToBatch = async (req, res, next) => {
   const { batch, course, task_title, task_description, due_date } = req.body;
 
@@ -27,24 +27,43 @@ export const assignTaskToBatch = async (req, res, next) => {
 
     const students = emailQuery.rows;
 
-    // 3. Send Emails to Each Student Individually
-    const sendPromises = students.map(({ email, student_id }) => {
-      return sendBulkEmails(email, `📚 New Task Assigned: ${task_title}`, {
-        batch,
-        course,
-        task_title,
-        task_description,
-        due_date,
-        viewLink: `https://yourdomain.com/assignment/${task.task_id}`,
-        doneLink: `https://nystai-backend.onrender.com/Students-Tasks/mark-task-done/${task.task_id}/${student_id}`
-      });
+    // 3. Send Emails and Log Status
+    const sendPromises = students.map(async ({ email, student_id }) => {
+      try {
+        // Send Email
+        await sendBulkEmails(email, `📚 New Task Assigned: ${task_title}`, {
+          batch,
+          course,
+          task_title,
+          task_description,
+          due_date,
+          viewLink: `https://yourdomain.com/assignment/${task.task_id}`,
+          doneLink: `https://nystai-backend.onrender.com/Students-Tasks/mark-task-done/${task.task_id}/${student_id}`
+        });
+
+        // Insert "sent" status into tracking table
+        await pool.query(
+          `INSERT INTO student_task_emails (task_id, student_id, email, email_status)
+           VALUES ($1, $2, $3, 'sent')`,
+          [task.task_id, student_id, email]
+        );
+      } catch (err) {
+        console.error(`Failed to send email to ${email}`, err);
+
+        // Insert "failed" status into tracking table
+        await pool.query(
+          `INSERT INTO student_task_emails (task_id, student_id, email, email_status)
+           VALUES ($1, $2, $3, 'failed')`,
+          [task.task_id, student_id, email]
+        );
+      }
     });
 
     await Promise.all(sendPromises);
 
     res.status(200).json({
       success: true,
-      message: "Task assigned and emails sent",
+      message: "Task assigned, emails sent, and status recorded",
       task
     });
   } catch (err) {
