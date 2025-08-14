@@ -164,7 +164,7 @@ export default function StudentAddForm() {
     }
 
 
-    if (!/^\d{12}$/.test(formData.aadhar_number)) {
+    if (!/^\d{12}$/.test(formData.aadhar_number || '')) {
       newErrors.aadhar_number = "Aadhar must be 12 digits";
     }
 

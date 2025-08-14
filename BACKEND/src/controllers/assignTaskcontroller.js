@@ -42,7 +42,11 @@ export const assignTaskToBatch = async (req, res, next) => {
 
     await Promise.all(sendPromises);
 
-    res.status(200).json({ message: "Task assigned and emails sent", task });
+    res.status(200).json({
+      success: true,
+      message: "Task assigned and emails sent",
+      task
+    });
   } catch (err) {
     console.error(err);
     next(err);
@@ -54,7 +58,11 @@ export const assignTaskToBatch = async (req, res, next) => {
 export const getAllAssignedTasks = async (req, res, next) => {
   try {
     const result = await pool.query("SELECT * FROM student_batch_tasks ORDER BY assigned_at DESC");
-    res.status(200).json({ tasks: result.rows });
+    res.status(200).json({
+      success: true,
+      message: "All assigned tasks fetched successfully",
+      tasks: result.rows
+    });
   } catch (error) {
     console.error("Error fetching tasks:", error);
     res.status(500).json({ error: "Failed to fetch tasks" });
@@ -73,15 +81,61 @@ export const getSingleAssignedTask = async (req, res, next) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Task not found"
+      });
     }
 
-    res.status(200).json({ task: result.rows[0] });
+    res.status(200).json({
+      success: true,
+      message: "Task fetched successfully",
+      task: result.rows[0]
+    });
+
   } catch (error) {
-    console.error("Error fetching task:", error);
-    res.status(500).json({ error: "Failed to fetch task" });
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch task"
+    });
+
   }
 };
+
+
+
+// This Function is for Deleting a Task
+export const deleteAssignedTask = async (req, res, next) => {
+  const { task_id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "DELETE FROM student_batch_tasks WHERE task_id = $1 RETURNING *",
+      [task_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Task deleted successfully"
+    });
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete task"
+    });
+  }
+};
+
+
 
 
 // This Function is for Updating a "Assignment Status"

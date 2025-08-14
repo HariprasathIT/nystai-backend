@@ -7,17 +7,18 @@ const validDomains = ["gmail.com", "yahoo.com", "outlook.com"];
 
 export const tutorUpdateValidator = [
 
-    body("first_name").notEmpty().withMessage("First name is required")
+    body("first_name")
+        .notEmpty().withMessage("First name is required").bail()
         .isLength({ min: 4, max: 30 }).withMessage('First name must be between 4 and 30 characters')
         .isAlpha().withMessage('Name must contain only letters'),
 
     body("last_name")
-        .notEmpty().withMessage("Last name is required")
+        .notEmpty().withMessage("Last name is required").bail()
         .isLength({ max: 4 }).withMessage("Last name must be at most 4 characters long")
         .matches(/^[A-Za-z\s]+$/).withMessage("Last name must contain only in letters"),
 
     body("dob")
-        .notEmpty().withMessage("Date of birth is required")
+        .notEmpty().withMessage("Date of birth is required").bail()
         .isISO8601().withMessage("Date of birth must be a valid date")
         .custom((value) => {
             const inputDate = new Date(value);
@@ -32,10 +33,10 @@ export const tutorUpdateValidator = [
         }),
 
 
-    body("gender").notEmpty().withMessage("Gender is required"),
+    body("gender").bail().notEmpty().withMessage("Gender is required"),
 
     body("email")
-        .notEmpty().withMessage("Email is required")
+        .notEmpty().withMessage("Email is required").bail()
         .isEmail().withMessage("Invalid email format")
         .custom((value, { req }) => {
             const domain = value.split("@")[1];
@@ -54,7 +55,7 @@ export const tutorUpdateValidator = [
     // })
     ,
     body("phone")
-        .notEmpty().withMessage("Phone number is required")
+        .notEmpty().withMessage("Phone number is required").bail()
         .isMobilePhone("en-IN").withMessage("Invalid phone number")
         .matches(/^[6-9]\d{9}$/).withMessage('Invalid phone number, Phone number must be 10 digits, starting with 6-9')
     // .custom(async (value, { req }) => {
@@ -67,12 +68,12 @@ export const tutorUpdateValidator = [
     // })
     ,
 
-    body("expertise").notEmpty().withMessage("Expertise / Courses is required"),
+    body("expertise").bail().notEmpty().withMessage("Expertise / Courses is required"),
 
-    body("experience_years")
+    body("experience_years").bail()
         .notEmpty().withMessage("Experience is required"),
 
-    body("joining_date")
+    body("joining_date").bail()
         .notEmpty().withMessage("Joining date is required")
         .custom((value) => {
             const inputDate = new Date(value);

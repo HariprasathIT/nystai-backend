@@ -32,7 +32,7 @@ export default function BasicTableOne() {
     axios
       .get("https://nystai-backend.onrender.com/get-all-students")
       .then((res) => {
-        setStudents(res.data);
+        setStudents(res.data.data);
         setLoading(false);
       })
       .catch((err) => {
@@ -168,7 +168,7 @@ function ActionDropdown({
 }: {
   onEdit: () => void;
   onDelete: () => void;
-    studentId: number;
+  studentId: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -195,7 +195,7 @@ function ActionDropdown({
       {isOpen && (
         <div className="absolute right-0 z-10 mt-2 w-[200px] rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark">
           <ul className="flex flex-col gap-1">
-          <Link to={`/Editstudentform/${studentId}`}>
+            <Link to={`/Editstudentform/${studentId}`}>
               <li>
                 <button
                   onClick={onEdit}

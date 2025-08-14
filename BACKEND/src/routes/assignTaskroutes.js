@@ -1,13 +1,15 @@
 import express from "express";
-import { assignTaskToBatch, getAllAssignedTasks, getSingleAssignedTask, markTaskAsDone } from '../controllers/assignTaskcontroller.js';
+import { assignTaskToBatch, deleteAssignedTask, getAllAssignedTasks, getSingleAssignedTask, markTaskAsDone } from '../controllers/assignTaskcontroller.js';
 import multer from 'multer';
+import { AssignTaskInputValidator, handleAssignTaskValidation } from "../middleware/taskvalidator.js";
 const upload = multer();
 
 const router = express.Router();
 
-router.post("/assign-task", upload.none(), assignTaskToBatch);
+router.post("/assign-task", upload.none(), AssignTaskInputValidator, handleAssignTaskValidation, assignTaskToBatch);
 router.get("/assigned-tasks", getAllAssignedTasks);
 router.get("/assigned-tasks/:task_id", getSingleAssignedTask);
+router.delete("/delete-tasks/:task_id", deleteAssignedTask);
 router.get("/mark-task-done/:task_id/:student_id", upload.none(), markTaskAsDone);
 
 

@@ -9,6 +9,7 @@ import { useDropzone } from "react-dropzone";
 import Upload from "../../../icons/Upload icon.png";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import toast from 'react-hot-toast';
 
 
 type StudentFormData = {
@@ -163,9 +164,9 @@ export default function StudentEditForm() {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      alert("Student updated!");
+      toast.success("Student updated!");
     } catch (error) {
-      console.error("Update failed", error);
+      toast.error("Failed to update student");
     }
   };
 
@@ -449,13 +450,6 @@ export default function StudentEditForm() {
                           ? new Date(formData.join_date)
                           : undefined
                       }
-                      // onChange={(date) => {
-                      //   const selectedDate = Array.isArray(date) ? date[0] : date;
-                      //   setFormData({
-                      //     ...formData,
-                      //     join_date: selectedDate ? selectedDate.toISOString().split("T")[0] : "",
-                      //   });
-                      // }}
                       onChange={(date) => {
                         const selectedDate = Array.isArray(date) ? date[0] : date;
 
