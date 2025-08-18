@@ -216,7 +216,7 @@ export const markTaskAsDone = async (req, res) => {
 
 
 
-// controllers/StudentTaskController.js
+// This Function is for Viewing Assignment Page
 export const viewAssignmentPage = async (req, res) => {
   const { task_id } = req.params;
 
@@ -265,7 +265,7 @@ export const viewAssignmentPage = async (req, res) => {
 
 
 
-// controllers/StudentTaskController.js
+// This Function is for Submitting Assignment
 export const submitAssignment = async (req, res, next) => {
   try {
     const { student_id, task_id } = req.body;
@@ -276,7 +276,7 @@ export const submitAssignment = async (req, res, next) => {
     if (file) {
       // Upload file to Vercel Blob
       const blob = await put(
-        `Assignments/${student_id}_${task_id}_${file.originalname}`,
+        `Assignments_Students_uploads/${student_id}_${task_id}_${file.originalname}`,
         file.buffer,
         {
           access: "public",
@@ -300,13 +300,14 @@ export const submitAssignment = async (req, res, next) => {
       message: "Assignment submitted successfully",
       fileUrl,
     });
+
   } catch (error) {
     next(error);
   }
 };
 
 
-
+// This Function is for Getting Student Submissions
 export const getStudentSubmissions = async (req, res) => {
   const student_id = req.user.id;
 

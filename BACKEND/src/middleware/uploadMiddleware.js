@@ -7,7 +7,8 @@ const storage = multer.memoryStorage();
 const allowedMimeTypes = [
   'image/jpeg',
   'image/png',
-  'image/webp',
+  'image/heic',
+  'image/heif',
   'application/pdf'
 ];
 
@@ -18,7 +19,7 @@ const fileFilter = (req, file, cb) => {
   }
 
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    return cb(new Error(' Only PDF and image files (JPG, PNG, WEBP) are allowed'));
+    return cb(new Error('Only PDF and image files (JPG, PNG, HEIC) are allowed'));
   }
 
   cb(null, true);

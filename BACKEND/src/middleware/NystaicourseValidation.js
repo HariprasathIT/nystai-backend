@@ -38,28 +38,28 @@ export const validateInsertCourseInput = [
 
 
 export const handleInsertValidationErrors = (req, res, next) => {
-    const errors = validationResult(req);
+  const errors = validationResult(req);
 
-    // Build default structure from body keys
-    const fields = {};
-    Object.keys(req.body).forEach(key => {
-        fields[key] = { success: true, msg: "" };
+  // Build default structure from body keys
+  const fields = {};
+  Object.keys(req.body).forEach(key => {
+    fields[key] = { success: true, msg: "" };
+  });
+
+  if (!errors.isEmpty()) {
+    errors.array().forEach(err => {
+      if (fields[err.path] !== undefined) {
+        fields[err.path] = { success: false, msg: err.msg };
+      }
     });
 
-    if (!errors.isEmpty()) {
-        errors.array().forEach(err => {
-            if (fields[err.path] !== undefined) {
-                fields[err.path] = { success: false, msg: err.msg };
-            }
-        });
+    return res.status(400).json({
+      success: false,
+      fields
+    });
+  }
 
-        return res.status(400).json({
-            success: false,
-            fields
-        });
-    }
-
-    next();
+  next();
 };
 
 
@@ -70,12 +70,18 @@ const storage = multer.memoryStorage();
 
 // File type check
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'];
+  const allowedTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/jpg',
+    'image/heic', 
+    'application/pdf' 
+  ];
 
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Only image files are allowed (jpeg, png, webp, gif, jpg)'));
+    cb(new Error('Only image files are allowed (jpeg, jpg, png, heic) or PDF documents'));
   }
 };
 

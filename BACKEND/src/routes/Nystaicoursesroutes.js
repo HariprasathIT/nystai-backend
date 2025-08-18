@@ -22,4 +22,3 @@ router.put('/update-courses/:id', NystaiCourseuploadImage.single('image_url'), v
 router.get('/get-course/:id', getSingleCourse);
 
 export default router;
-    

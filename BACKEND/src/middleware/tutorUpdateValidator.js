@@ -133,11 +133,18 @@ export const handleUpdateTutorValidation = (req, res, next) => {
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'];
+    const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+        'image/heic',      
+        'application/pdf' 
+    ];
+
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new Error('Only image files are allowed (jpeg, png, webp, gif, jpg)'));
+        cb(new Error('Only image files are allowed (jpeg, jpg, png, heic) or PDF documents'));
     }
 };
 
@@ -146,7 +153,6 @@ export const uploadImageTutor = multer({
     limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
     fileFilter
 });
-
 
 export const checkTutorImageRequired = (req, res, next) => {
     if (!req.file) {
