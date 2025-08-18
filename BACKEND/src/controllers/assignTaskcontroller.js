@@ -229,7 +229,7 @@ export const viewAssignmentPage = async (req, res) => {
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).send("<h2>❌ Task not found</h2>");
+      return res.status(404).send("<h2>Task not found</h2>");
     }
 
     const task = result.rows[0];
@@ -253,6 +253,6 @@ export const viewAssignmentPage = async (req, res) => {
     `);
   } catch (err) {
     console.error(err);
-    res.status(500).send("<h2>⚠️ Something went wrong</h2>");
+    res.status(500).send("<h2>Something went wrong</h2>");
   }
 };
