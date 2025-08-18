@@ -55,7 +55,7 @@ import taskRoutes from './src/routes/taskRoutes.js';
 
 const app = express();
 
-const whitelist = ["http://localhost:5173", "https://nystai-dashboard.vercel.app/"];
+const whitelist = ["http://localhost:5173", "https://admin-nystai-dashboard.vercel.app"];
 
 app.use(cors({
   origin: function (origin, callback) {
