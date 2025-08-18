@@ -37,7 +37,7 @@ export const assignTaskToBatch = async (req, res, next) => {
           task_title,
           task_description,
           due_date,
-          viewLink: `https://yourdomain.com/assignment/${task.task_id}`,
+          viewLink: `https://nystai-backend.onrender.com/assignment/${task.task_id}`,
           doneLink: `https://nystai-backend.onrender.com/Students-Tasks/mark-task-done/${task.task_id}/${student_id}`
         });
 
@@ -213,3 +213,26 @@ export const markTaskAsDone = async (req, res) => {
   }
 };
 
+
+// This Function is for Fetching a Task by ID
+export const getTaskById = async (req, res, next) => {
+  try {
+    const { taskId } = req.params;
+
+    const result = await pool.query(
+      `SELECT task_id, batch, course, task_title, task_description, due_date, assigned_at
+       FROM student_batch_tasks
+       WHERE task_id = $1`,
+      [taskId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Task not found" });
+    }
+
+    res.status(200).json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error("Error fetching task:", error);
+    next(error);
+  }
+};

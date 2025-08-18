@@ -1,4 +1,4 @@
-import pool from "../config/db.js"; // DB connection
+import pool from "../config/db.js"; 
 
 // Get students who received the task mail
 export const getMailSentStudents = async (req, res, next) => {
@@ -57,6 +57,7 @@ export const getMarkAsDoneStudents = async (req, res, next) => {
             count: result.rowCount,
             data: result.rows
         });
+        
     } catch (error) {
         console.error("Error fetching completed task students:", error);
         next(error);
