@@ -37,7 +37,7 @@ export const assignTaskToBatch = async (req, res, next) => {
           task_title,
           task_description,
           due_date,
-          viewLink: `https://nystai-backend.onrender.com/assignment/${task.task_id}`,
+          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${task.task_id}`,
           doneLink: `https://nystai-backend.onrender.com/Students-Tasks/mark-task-done/${task.task_id}/${student_id}`
         });
 
@@ -207,6 +207,7 @@ export const markTaskAsDone = async (req, res) => {
       <h2 style="font-family: Arial; color: green;">✅ Marked as Done!</h2>
       <p>Thank you for submitting your task.</p>
     `);
+
   } catch (err) {
     console.error(err);
     res.status(500).send("Something went wrong.");
@@ -214,25 +215,44 @@ export const markTaskAsDone = async (req, res) => {
 };
 
 
-// This Function is for Fetching a Task by ID
-export const getTaskById = async (req, res, next) => {
-  try {
-    const { taskId } = req.params;
 
+// controllers/StudentTaskController.js
+export const viewAssignmentPage = async (req, res) => {
+  const { task_id } = req.params;
+
+  try {
     const result = await pool.query(
-      `SELECT task_id, batch, course, task_title, task_description, due_date, assigned_at
+      `SELECT task_title, task_description, course, batch, due_date, assigned_at
        FROM student_batch_tasks
        WHERE task_id = $1`,
-      [taskId]
+      [task_id]
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: "Task not found" });
+      return res.status(404).send("<h2>❌ Task not found</h2>");
     }
 
-    res.status(200).json({ success: true, data: result.rows[0] });
-  } catch (error) {
-    console.error("Error fetching task:", error);
-    next(error);
+    const task = result.rows[0];
+
+    // Return as HTML page (just like mark as done)
+    res.send(`
+      <div style="font-family: Arial; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h2 style="color: #2c3e50;">📚 Assignment Details</h2>
+        <p><strong>Title:</strong> ${task.task_title}</p>
+        <p><strong>Description:</strong> ${task.task_description || "No description provided"}</p>
+        <p><strong>Course:</strong> ${task.course}</p>
+        <p><strong>Batch:</strong> ${task.batch}</p>
+        <p><strong>Due Date:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
+        <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
+        <br/>
+        <a href="https://nystai-backend.onrender.com/Students-Tasks/mark-task-done/${task_id}/STUDENT_ID"
+           style="display:inline-block; padding:10px 20px; background:#27ae60; color:white; text-decoration:none; border-radius:5px;">
+          ✅ Mark as Done
+        </a>
+      </div>
+    `);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("<h2>⚠️ Something went wrong</h2>");
   }
 };
