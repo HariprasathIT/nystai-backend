@@ -1,6 +1,6 @@
 import pool from "../config/db.js";
 import { sendBulkEmails } from "../utils/sendEmail.js";
-
+import { put } from "@vercel/blob";
 
 // This Function is for Creating a Task, Emailing Students, and Tracking Email Status
 export const assignTaskToBatch = async (req, res, next) => {
@@ -234,7 +234,7 @@ export const viewAssignmentPage = async (req, res) => {
 
     const task = result.rows[0];
 
-    // Return as HTML page (just like mark as done)
+    // Return as HTML page
     res.send(`
       <div style="font-family: Arial; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
         <h2 style="color: #2c3e50;">📚 Assignment Details</h2>
@@ -245,14 +245,84 @@ export const viewAssignmentPage = async (req, res) => {
         <p><strong>Due Date:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
         <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
         <br/>
-        <a href="https://nystai-backend.onrender.com/Students-Tasks/mark-task-done/${task_id}/STUDENT_ID"
-           style="display:inline-block; padding:10px 20px; background:#27ae60; color:white; text-decoration:none; border-radius:5px;">
-          ✅ Mark as Done
-        </a>
+
+        <form action="/student/tasks/${task_id}/submit" method="POST" enctype="multipart/form-data">
+          <label for="file">📂 Upload Your Work:</label><br/>
+          <input type="file" name="file" accept="image/*,application/pdf" required />
+          <br/><br/>
+          <button type="submit" style="padding: 8px 16px; background:#27ae60; color:white; border:none; border-radius:5px; cursor:pointer;">
+            Submit Assignment
+          </button>
+        </form>
       </div>
     `);
   } catch (err) {
     console.error(err);
     res.status(500).send("<h2>Something went wrong</h2>");
+  }
+};
+
+
+
+
+// controllers/StudentTaskController.js
+export const submitAssignment = async (req, res, next) => {
+  try {
+    const { student_id, task_id } = req.body;
+    const file = req.file; // comes from multer
+
+    let fileUrl = null;
+
+    if (file) {
+      // Upload file to Vercel Blob
+      const blob = await put(
+        `Assignments/${student_id}_${task_id}_${file.originalname}`,
+        file.buffer,
+        {
+          access: "public",
+          token: process.env.VERCEL_BLOB_RW_TOKEN,
+          addRandomSuffix: true,
+        }
+      );
+
+      fileUrl = blob.url; // ✅ public file URL
+    }
+
+    // Save fileUrl in DB with assignment submission
+    await db.query(
+      `INSERT INTO student_submissions (student_id, task_id, attachment_url, submitted_at) 
+       VALUES ($1, $2, $3, NOW())`,
+      [student_id, task_id, fileUrl]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Assignment submitted successfully",
+      fileUrl,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
+export const getStudentSubmissions = async (req, res) => {
+  const student_id = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `SELECT s.submission_id, s.file_url, s.submitted_at, t.task_title
+       FROM student_task_submissions s
+       JOIN student_batch_tasks t ON s.task_id = t.task_id
+       WHERE s.student_id = $1
+       ORDER BY s.submitted_at DESC`,
+      [student_id]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Failed to fetch submissions");
   }
 };
