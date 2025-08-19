@@ -44,29 +44,12 @@ export const tutorUpdateValidator = [
                 throw new Error("Only Gmail, Yahoo, and Outlook emails are allowed");
             }
             return true;
-        })
-    // .custom(async (value, { req }) => {
-    //     const { id } = req.params;
-    //     const result = await db.query("SELECT * FROM nystai_tutors WHERE email = $1 AND tutor_id != $2", [value, id]);
-    //     if (result.rows.length > 0) {
-    //         throw new Error("Email already exists");
-    //     }
-    //     return true;
-    // })
-    ,
+        }),
+        
     body("phone")
         .notEmpty().withMessage("Phone number is required").bail()
         .isMobilePhone("en-IN").withMessage("Invalid phone number")
-        .matches(/^[6-9]\d{9}$/).withMessage('Invalid phone number, Phone number must be 10 digits, starting with 6-9')
-    // .custom(async (value, { req }) => {
-    //     const { id } = req.params;
-    //     const result = await db.query("SELECT * FROM nystai_tutors WHERE phone = $1 AND tutor_id != $2", [value, id]);
-    //     if (result.rows.length > 0) {
-    //         throw new Error("Phone number already exists");
-    //     }
-    //     return true;
-    // })
-    ,
+        .matches(/^[6-9]\d{9}$/).withMessage('Invalid phone number, Phone number must be 10 digits, starting with 6-9'),
 
     body("expertise").bail().notEmpty().withMessage("Expertise / Courses is required"),
 
@@ -163,3 +146,5 @@ export const checkTutorImageRequired = (req, res, next) => {
     }
     next();
 };
+
+

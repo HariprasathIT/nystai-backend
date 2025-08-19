@@ -5,41 +5,67 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export const login = async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const result = await pool.query("SELECT * FROM admin_users WHERE email = $1", [email]);
+// Signup for superadmin and tutor roles
+// This will be a single API for both roles
+export const signup = async (req, res, next) => {
+  const { name, email, password, role } = req.body;
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+  try {
+    if (!['superadmin', 'tutor'].includes(role)) {
+      return res.status(400).json({ success: false, message: "Invalid role" });
     }
 
-    const user = result.rows[0];
+    const userExist = await pool.query("SELECT * FROM nystai_users WHERE email=$1", [email]);
+    if (userExist.rows.length > 0) {
+      return res.status(400).json({ success: false, message: "Email already exists" });
+    }
 
-    // Check plain text password (replace with bcrypt compare if hashed)
-    const isMatch = await bcrypt.compare(password, user.password);
-    // const isMatch = await bcrypt.compare(password, user.password);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
+    const newUser = await pool.query(
+      "INSERT INTO nystai_users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
+      [name, email, hashedPassword, role]
+    );
+
+    res.status(201).json({ success: true, user: newUser.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Login (single API for all roles)
+// This will be a single API for all roles
+export const login = async (req, res, next) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await pool.query("SELECT * FROM nystai_users WHERE email=$1", [email]);
+    if (user.rows.length === 0) {
+      return res.status(400).json({ success: false, message: "Invalid email or password" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.rows[0].password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(400).json({ success: false, message: "Invalid email or password" });
     }
 
     const token = jwt.sign(
-      {
-        admin_id: user.admin_id,
-        email: user.email,
-        role: user.role,
-      },
+      { id: user.rows[0].id, role: user.rows[0].role },
       process.env.JWT_SECRET,
-      { expiresIn: "2h" }
+      { expiresIn: "1d" }
     );
 
-    return res.status(200).json({
+    res.json({
+      success: true,
       token,
-      role: user.role,
-      email: user.email,
+      user: {
+        id: user.rows[0].id,
+        name: user.rows[0].name,
+        email: user.rows[0].email,
+        role: user.rows[0].role,
+      },
     });
   } catch (err) {
-    return res.status(500).json({ message: "Server error", error: err.message });
+    next(err);
   }
 };

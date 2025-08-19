@@ -113,6 +113,8 @@ export default function StudentAddForm() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
 
+
+
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
@@ -122,14 +124,12 @@ export default function StudentAddForm() {
       newErrors.name = "Name must be 4–30 letters only";
     }
 
-    // if (!formData.last_name.trim()) {
-    //   newErrors.last_name = "Last name is required";
-    // } else if (!/^[A-Za-z]{4,30}$/.test(formData.last_name)) {
-    //   newErrors.last_name = "Last name must be 4–30 letters only";
-    // }
-
     if (!formData.last_name) {
-      newErrors.last_name = "last Name is required";
+      newErrors.last_name = "Last name is required";
+    } else if (formData.last_name.length > 4) {
+      newErrors.last_name = "Last name must be at most 4 characters long";
+    } else if (!/^[A-Za-z\s]+$/.test(formData.last_name)) {
+      newErrors.last_name = "Last name must contain only letters";
     }
 
     if (!formData.dob) {
@@ -153,7 +153,9 @@ export default function StudentAddForm() {
       newErrors.email = "Invalid or unsupported email domain";
     }
 
-    if (!/^[6-9]\d{9}$/.test(formData.phone)) {
+    if (!formData.phone) {
+      newErrors.phone = "Phone number is required";
+    } else if (!/^[6-9]\d{9}$/.test(formData.phone)) {
       newErrors.phone = "Invalid phone number";
     }
 
@@ -163,8 +165,7 @@ export default function StudentAddForm() {
       newErrors.alt_phone = "Invalid alternate phone number";
     }
 
-
-    if (!/^\d{12}$/.test(formData.aadhar_number || '')) {
+    if (!/^\d{12}$/.test(formData.aadhar_number || "")) {
       newErrors.aadhar_number = "Aadhar must be 12 digits";
     }
 
@@ -210,24 +211,22 @@ export default function StudentAddForm() {
     if (!formData.batch) newErrors.batch = "Batch is required";
     if (!formData.tutor) newErrors.tutor = "Tutor is required";
 
-
-    // Check if any document is missing
-    if (!documents.passport_photo) {
-      newErrors.passport_photo = "Passport photo is required";
-    }
-    if (!documents.pan_card) {
-      newErrors.pan_card = "PAN card is required";
-    }
-    if (!documents.aadhar_card) {
-      newErrors.aadhar_card = "Aadhar card is required";
-    }
-    if (!documents.sslc_marksheet) {
-      newErrors.sslc_marksheet = "SSLC marksheet is required";
-    }
+    if (!documents.passport_photo) newErrors.passport_photo = "Passport photo is required";
+    if (!documents.pan_card) newErrors.pan_card = "PAN card is required";
+    if (!documents.aadhar_card) newErrors.aadhar_card = "Aadhar card is required";
+    if (!documents.sslc_marksheet) newErrors.sslc_marksheet = "SSLC marksheet is required";
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    // 🔥 Show all errors in toast
+    if (Object.keys(newErrors).length > 0) {
+      Object.values(newErrors).forEach((errMsg) => toast.error(errMsg));
+      return false;
+    }
+
+    return true;
   };
+
 
 
   return (
@@ -355,8 +354,15 @@ export default function StudentAddForm() {
                 <div>
                   <Label>Mail ID</Label>
                   <div className="relative">
-                    <Input placeholder="info@gmail.com" type="email" className={`${errors.last_name ? 'border border-red-500' : ''}`} value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                    <Input
+                      placeholder="info@gmail.com"
+                      type="email"
+                      className={`${errors.email ? 'border border-red-500' : ''}`}
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
+                    />
                     {errors.email && (
                       <p className="text-red-500 text-sm mt-1">{errors.email}</p>
                     )}
@@ -364,18 +370,31 @@ export default function StudentAddForm() {
                 </div>
               </div>
 
+
               <div className="space-y-6">
                 <div>
                   <Label>Phone Number</Label>
                   <div className="relative">
-                    <Input placeholder="9876543210" type="tel" className={`${errors.last_name ? 'border border-red-500' : ''}`} value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                    <Input
+                      placeholder="9876543210"
+                      type="tel"
+                      maxLength={10} // prevents typing more than 10
+                      className={`${errors.phone ? 'border border-red-500' : ''}`}
+                      value={formData.phone}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ""); // remove non-digits
+                        if (value.length <= 10) {
+                          setFormData({ ...formData, phone: value });
+                        }
+                      }}
+                    />
                     {errors.phone && (
                       <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
                     )}
                   </div>
                 </div>
               </div>
+
 
               <div className="space-y-6">
                 <div>
@@ -385,28 +404,42 @@ export default function StudentAddForm() {
                       placeholder="9876543211"
                       type="tel"
                       value={formData.alt_phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, alt_phone: e.target.value })
-                      }
+                      maxLength={10} // restrict typing to 10 digits
+                      onChange={(e) => {
+                        // allow only numbers & max 10 digits
+                        const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setFormData({ ...formData, alt_phone: value });
+                      }}
                       className={`${errors.alt_phone ? 'border border-red-500' : ''}`}
                     />
-                    {errors.phone && (
-                      <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+                    {errors.alt_phone && (
+                      <p className="text-red-500 text-sm mt-1">{errors.alt_phone}</p>
                     )}
-
                   </div>
                 </div>
               </div>
+
 
               <div className="space-y-6">
                 <div>
                   <Label>Aadhar Number</Label>
                   <div className="relative">
-                    <Input placeholder="XXXX-XXXX-XXXX" type="text" className={`${errors.last_name ? 'border border-red-500' : ''}`} value={formData.aadhar_number}
-                      onChange={(e) => setFormData({ ...formData, aadhar_number: e.target.value })} />
+                    <Input
+                      placeholder="XXXX-XXXX-XXXX"
+                      type="text"
+                      maxLength={12} // restricts input to 12 chars
+                      value={formData.aadhar_number}
+                      onChange={(e) => {
+                        // Allow only numbers
+                        const value = e.target.value.replace(/\D/g, "");
+                        setFormData({ ...formData, aadhar_number: value });
+                      }}
+                      className={`${errors.aadhar_number ? 'border border-red-500' : ''}`}
+                    />
                     {errors.aadhar_number && (
                       <p className="text-red-500 text-sm mt-1">{errors.aadhar_number}</p>
                     )}
+
                   </div>
                 </div>
               </div>
@@ -417,14 +450,27 @@ export default function StudentAddForm() {
                 <div>
                   <Label>PAN Number</Label>
                   <div className="relative">
-                    <Input placeholder="ABCDE1234F" type="text" className={`${errors.last_name ? 'border border-red-500' : ''}`} value={formData.pan_number}
-                      onChange={(e) => setFormData({ ...formData, pan_number: e.target.value })} />
+                    <Input
+                      placeholder="ABCDE1234F"
+                      type="text"
+                      maxLength={10} // PAN is exactly 10 chars
+                      className={`${errors.pan_number ? 'border border-red-500' : ''}`}
+                      value={formData.pan_number}
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase(); // auto uppercase
+                        // allow only alphabets and numbers, no special chars
+                        if (/^[A-Z0-9]*$/.test(value)) {
+                          setFormData({ ...formData, pan_number: value });
+                        }
+                      }}
+                    />
                     {errors.pan_number && (
                       <p className="text-red-500 text-sm mt-1">{errors.pan_number}</p>
                     )}
                   </div>
                 </div>
               </div>
+
 
               <div className="space-y-6">
                 <div>
@@ -488,6 +534,7 @@ export default function StudentAddForm() {
                   )}
                 </div>
               </div>
+              
 
             </div>
 

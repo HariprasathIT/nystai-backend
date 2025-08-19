@@ -1,5 +1,5 @@
 import express from "express";
-import { assignTaskToBatch, deleteAssignedTask, getAllAssignedTasks, getSingleAssignedTask, markTaskAsDone, submitAssignment, viewAssignmentPage } from '../controllers/assignTaskcontroller.js';
+import { assignTaskToBatch, deleteAssignedTask, getAllAssignedTasks, getMailSentStudents, getMarkAsDoneStudents, getSingleAssignedTask, getStudentTaskUploads, markTaskAsDone, submitAssignment, viewAssignmentPage } from '../controllers/assignTaskcontroller.js';
 import multer from 'multer';
 import { AssignTaskInputValidator, handleAssignTaskValidation } from "../middleware/taskvalidator.js";
 const upload = multer();
@@ -10,11 +10,13 @@ router.post("/assign-task", upload.none(), AssignTaskInputValidator, handleAssig
 router.get("/assigned-tasks", getAllAssignedTasks);
 router.get("/assigned-tasks/:task_id", getSingleAssignedTask);
 router.delete("/delete-tasks/:task_id", deleteAssignedTask);
+
 router.get("/mark-task-done/:task_id/:student_id", upload.none(), markTaskAsDone);
 router.get('/assignment/:task_id', viewAssignmentPage);
-router.post("/student/tasks/:task_id/submit", upload.single("file"), submitAssignment);
+router.post("/assignmentuploads/:task_id/:student_id/submit", upload.single("file"), submitAssignment);
 
-
-
+router.get("/task/:taskId/mailsent", getMailSentStudents);
+router.get("/task/:taskId/done", getMarkAsDoneStudents);
+router.get("/task/:taskId/student/:studentId/uploads", getStudentTaskUploads);
 
 export default router;

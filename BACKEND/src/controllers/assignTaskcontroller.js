@@ -1,6 +1,7 @@
 import pool from "../config/db.js";
 import { sendBulkEmails } from "../utils/sendEmail.js";
 import { put } from "@vercel/blob";
+import db from "../config/db.js";
 
 // This Function is for Creating a Task, Emailing Students, and Tracking Email Status
 export const assignTaskToBatch = async (req, res, next) => {
@@ -155,6 +156,108 @@ export const deleteAssignedTask = async (req, res, next) => {
 };
 
 
+// Get students who received the task mail
+export const getMailSentStudents = async (req, res, next) => {
+    try {
+        const { taskId } = req.params;
+
+        const result = await pool.query(
+            `SELECT s.student_id, s.name, s.last_name, s.email, e.email_status, e.sent_at
+       FROM studentspersonalinformation s
+       JOIN student_task_emails e ON s.student_id = e.student_id
+       WHERE e.task_id = $1`,
+            [taskId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No students found for task ID ${taskId}`
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            count: result.rowCount,
+            data: result.rows
+        });
+    } catch (error) {
+        console.error("Error fetching mail sent students:", error);
+        next(error);
+    }
+};
+
+
+// Get students who marked task as done
+export const getMarkAsDoneStudents = async (req, res, next) => {
+    try {
+        const { taskId } = req.params;
+
+        const result = await pool.query(
+            `SELECT s.student_id, s.name AS first_name, s.last_name, s.email, sub.submitted_at
+       FROM studentspersonalinformation s
+       JOIN student_task_submissions sub ON s.student_id = sub.student_id
+       WHERE sub.task_id = $1`,
+            [taskId]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No completed submissions found for task ID ${taskId}`
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            count: result.rowCount,
+            data: result.rows
+        });
+        
+    } catch (error) {
+        console.error("Error fetching completed task students:", error);
+        next(error);
+    }
+};
+
+
+// Get a student's uploaded submissions for a specific task
+export const getStudentTaskUploads = async (req, res) => {
+  const { taskId, studentId } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT submission_id,task_id,student_id, file_url, submitted_at
+       FROM student_task_submissions_uploads
+       WHERE task_id = $1 AND student_id = $2
+       ORDER BY submitted_at DESC`,
+      [taskId, studentId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No uploads found for student ID ${studentId} on task ID ${taskId}`,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: result.rowCount,
+      uploads: result.rows,
+    });
+  } catch (error) {
+    console.error("Error fetching student uploads:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch uploads",
+    });
+  }
+};
+
+
+
+
 
 
 // This Function is for Updating a "Assignment Status"
@@ -246,7 +349,7 @@ export const viewAssignmentPage = async (req, res) => {
         <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
         <br/>
 
-        <form action="/student/tasks/${task_id}/submit" method="POST" enctype="multipart/form-data">
+      <form action="https://nystai-backend.onrender.com/student/tasks/submit" method="POST" enctype="multipart/form-data">
           <label for="file">📂 Upload Your Work:</label><br/>
           <input type="file" name="file" accept="image/*,application/pdf" required />
           <br/><br/>
@@ -268,7 +371,8 @@ export const viewAssignmentPage = async (req, res) => {
 // This Function is for Submitting Assignment
 export const submitAssignment = async (req, res, next) => {
   try {
-    const { student_id, task_id } = req.body;
+    // read from URL params instead of body
+    const { student_id, task_id } = req.params;
     const file = req.file; // comes from multer
 
     let fileUrl = null;
@@ -290,7 +394,7 @@ export const submitAssignment = async (req, res, next) => {
 
     // Save fileUrl in DB with assignment submission
     await db.query(
-      `INSERT INTO student_submissions (student_id, task_id, attachment_url, submitted_at) 
+      `INSERT INTO student_task_submissions_uploads (student_id, task_id, file_url, submitted_at) 
        VALUES ($1, $2, $3, NOW())`,
       [student_id, task_id, fileUrl]
     );
@@ -305,6 +409,7 @@ export const submitAssignment = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 // This Function is for Getting Student Submissions
