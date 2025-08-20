@@ -520,4 +520,3 @@ export const getCourseStudentCount = async (req, res, next) => {
   }
 };
 
-

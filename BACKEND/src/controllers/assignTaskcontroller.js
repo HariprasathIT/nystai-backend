@@ -207,15 +207,30 @@ export const getMailSentStudents = async (req, res, next) => {
 
 
 
+
 // Get students who marked task as done
 export const getMarkAsDoneStudents = async (req, res, next) => {
   try {
     const { taskId } = req.params;
 
     const result = await pool.query(
-      `SELECT s.student_id, s.name AS first_name, s.last_name, s.email, sub.submitted_at
+      `SELECT 
+          s.student_id, 
+          s.name, 
+          s.last_name, 
+          s.email, 
+          c.course_enrolled,
+          c.batch,
+          t.task_title,
+          t.due_date,
+          sub.submitted_at
        FROM studentspersonalinformation s
-       JOIN student_task_submissions sub ON s.student_id = sub.student_id
+       JOIN student_task_submissions sub 
+          ON s.student_id = sub.student_id
+       JOIN studentcoursedetails c 
+          ON s.student_id = c.student_id
+       JOIN student_batch_tasks t 
+          ON sub.task_id = t.task_id
        WHERE sub.task_id = $1`,
       [taskId]
     );
@@ -240,16 +255,32 @@ export const getMarkAsDoneStudents = async (req, res, next) => {
 };
 
 
+
+
 // Get a student's uploaded submissions for a specific task
 export const getStudentTaskUploads = async (req, res) => {
   const { taskId, studentId } = req.params;
 
   try {
     const result = await pool.query(
-      `SELECT submission_id,task_id,student_id, file_url, submitted_at
-       FROM student_task_submissions_uploads
-       WHERE task_id = $1 AND student_id = $2
-       ORDER BY submitted_at DESC`,
+      `SELECT 
+          s.name,
+          s.last_name,
+          c.batch,
+          c.course_enrolled,
+          t.task_title,
+          u.submitted_at,
+          t.due_date,
+          u.file_url
+       FROM student_task_submissions_uploads u
+       INNER JOIN studentspersonalinformation s 
+          ON s.student_id = u.student_id
+       INNER JOIN studentcoursedetails c 
+          ON c.student_id = s.student_id
+       INNER JOIN student_batch_tasks t 
+          ON t.task_id = u.task_id
+       WHERE u.task_id = $1 AND u.student_id = $2
+       ORDER BY u.submitted_at DESC`,
       [taskId, studentId]
     );
 
@@ -273,6 +304,7 @@ export const getStudentTaskUploads = async (req, res) => {
     });
   }
 };
+
 
 
 
@@ -408,7 +440,7 @@ export const submitAssignment = async (req, res, next) => {
         }
       );
 
-      fileUrl = blob.url; // ✅ public file URL
+      fileUrl = blob.url; 
     }
 
     // Save fileUrl in DB with assignment submission
@@ -429,25 +461,4 @@ export const submitAssignment = async (req, res, next) => {
   }
 };
 
-
-
-// This Function is for Getting Student Submissions
-export const getStudentSubmissions = async (req, res) => {
-  const student_id = req.user.id;
-
-  try {
-    const result = await pool.query(
-      `SELECT s.submission_id, s.file_url, s.submitted_at, t.task_title
-       FROM student_task_submissions s
-       JOIN student_batch_tasks t ON s.task_id = t.task_id
-       WHERE s.student_id = $1
-       ORDER BY s.submitted_at DESC`,
-      [student_id]
-    );
-
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Failed to fetch submissions");
-  }
-};
+``

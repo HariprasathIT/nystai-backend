@@ -33,5 +33,4 @@ router.get('/students-count', getStudentsCount);
 router.get('/get-completed-students-count', getCompletedStudentsCount);
 
 
-
 export default router;
