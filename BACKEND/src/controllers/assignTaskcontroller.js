@@ -450,7 +450,7 @@ export const viewAssignmentPage = async (req, res) => {
         <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
         <br/>
 
-      <form action="https://nystai-backend.onrender.com/assignmentuploads/${task.task_id}/${student_id}/submit" method="POST" enctype="multipart/form-data">
+      <form action="https://nystai-backend.onrender.com/student/tasks/submit" method="POST" enctype="multipart/form-data">
           <label for="file">📂 Upload Your Work:</label><br/>
           <input type="file" name="file" accept="image/*,application/pdf" required />
           <br/><br/>
