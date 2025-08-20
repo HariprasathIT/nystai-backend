@@ -218,7 +218,7 @@ export const getMarkAsDoneStudents = async (req, res, next) => {
           s.student_id, 
           s.name, 
           s.last_name, 
-          s.email, 
+          d.passport_photo_url,
           c.course_enrolled,
           c.batch,
           t.task_title,
@@ -231,6 +231,8 @@ export const getMarkAsDoneStudents = async (req, res, next) => {
           ON s.student_id = c.student_id
        JOIN student_batch_tasks t 
           ON sub.task_id = t.task_id
+      LEFT JOIN student_proof_documents d
+          ON s.student_id = d.student_id
        WHERE sub.task_id = $1`,
       [taskId]
     );
@@ -440,7 +442,7 @@ export const submitAssignment = async (req, res, next) => {
         }
       );
 
-      fileUrl = blob.url; 
+      fileUrl = blob.url;
     }
 
     // Save fileUrl in DB with assignment submission
