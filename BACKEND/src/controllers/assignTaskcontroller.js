@@ -163,8 +163,7 @@ export const getMailSentStudents = async (req, res, next) => {
     const { taskId } = req.params;
 
     const result = await pool.query(
-      `SELECT 
-                s.student_id, 
+      `SELECT  
                 s.name, 
                 s.last_name, 
                 d.passport_photo_url,  -- passport photo from documents table
