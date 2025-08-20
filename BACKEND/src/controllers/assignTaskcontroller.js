@@ -256,6 +256,55 @@ export const getMarkAsDoneStudents = async (req, res, next) => {
 };
 
 
+// Get a particular student's submission for a task
+export const getStudentSingleTaskSubmission = async (req, res, next) => {
+  try {
+    const { taskId, studentId } = req.params;
+
+    const result = await pool.query(
+      `SELECT 
+          s.name, 
+          s.last_name, 
+          d.passport_photo_url,
+          c.course_enrolled,
+          c.batch,
+          t.task_title,
+          t.task_description,
+          t.due_date,
+          sub.submitted_at
+       FROM studentspersonalinformation s
+       JOIN student_task_submissions sub 
+          ON s.student_id = sub.student_id
+       JOIN studentcoursedetails c 
+          ON s.student_id = c.student_id
+       JOIN student_batch_tasks t 
+          ON sub.task_id = t.task_id
+       LEFT JOIN student_proof_documents d
+          ON s.student_id = d.student_id
+       WHERE sub.task_id = $1 AND s.student_id = $2`,
+      [taskId, studentId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No submission found for student ${studentId} in task ${taskId}`
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Error fetching student submission:", error);
+    next(error);
+  }
+};
+
+
+
 
 
 // Get a student's uploaded submissions for a specific task
@@ -312,7 +361,7 @@ export const getStudentTaskUploads = async (req, res) => {
 
 
 
-// This Function is for Updating a "Assignment Status"
+// This Function is for Updating a "Assignment Status" in GMAIL
 // Default : "pending"
 // Update : "Completed"
 export const markTaskAsDone = async (req, res) => {
