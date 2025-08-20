@@ -159,45 +159,49 @@ export const deleteAssignedTask = async (req, res, next) => {
 
 // Get students who received the task mail with profile image + course enrolled
 export const getMailSentStudents = async (req, res, next) => {
-    try {
-        const { taskId } = req.params;
+  try {
+    const { taskId } = req.params;
 
-        const result = await pool.query(
-            `SELECT 
+    const result = await pool.query(
+      `SELECT 
                 s.student_id, 
                 s.name, 
                 s.last_name, 
                 d.passport_photo_url,  -- passport photo from documents table
                 c.course_enrolled,     -- course name/enrolled
+                c.batch,
                 e.email_status, 
-                e.sent_at
+                e.sent_at,
+                t.task_title
              FROM studentspersonalinformation s
              JOIN student_task_emails e 
                 ON s.student_id = e.student_id
-             LEFT JOIN studentcoursedetails c 
+            LEFT JOIN studentcoursedetails c 
                 ON s.student_id = c.student_id
-             LEFT JOIN student_proof_documents d
+            LEFT JOIN student_proof_documents d
                 ON s.student_id = d.student_id
+            LEFT JOIN student_batch_tasks t
+                ON e.task_id = t.task_id
              WHERE e.task_id = $1`,
-            [taskId]
-        );
+      [taskId]
+    );
 
-        if (result.rowCount === 0) {
-            return res.status(404).json({
-                success: false,
-                message: `No students found for task ID ${taskId}`
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            count: result.rowCount,
-            data: result.rows
-        });
-    } catch (error) {
-        console.error("Error fetching mail sent students:", error);
-        next(error);
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No students found for task ID ${taskId}`
+      });
     }
+
+    res.status(200).json({
+      success: true,
+      count: result.rowCount,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error("Error fetching mail sent students:", error);
+    next(error);
+  }
 };
 
 
