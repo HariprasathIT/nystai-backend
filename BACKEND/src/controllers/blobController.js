@@ -280,7 +280,7 @@ export const getStudentById = async (req, res) => {
             message: 'Failed to fetch student',
             detail: err.message,
         });
-        
+
     } finally {
         client.release();
     }
@@ -454,3 +454,70 @@ export const updateStudentWithProof = async (req, res) => {
         client.release();
     }
 };
+
+
+// Get total students count
+// This function retrieves the total count of students from the database
+export const getStudentsCount = async (req, res, next) => {
+    try {
+        const result = await db.query(`
+      SELECT COUNT(*) AS total_students FROM studentspersonalinformation
+    `);
+
+        res.status(200).json({
+            success: true,
+            message: "Students count fetched successfully",
+            count: parseInt(result.rows[0].total_students, 10)
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+
+// Get completed students count
+// This function retrieves the count of students who have completed their courses
+export const getCompletedStudentsCount = async (req, res, next) => {
+    try {
+        const result = await db.query(`
+            SELECT COUNT(*) AS completed_students 
+            FROM studentsuniqueqrcode
+            WHERE certificate_status = 'completed'
+        `);
+
+        res.status(200).json({
+            success: true,
+            message: "Completed students count fetched successfully",
+            count: parseInt(result.rows[0].completed_students, 10)
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+
+
+// Get student count for a particular course
+// This function retrieves the count of students enrolled in a specific course
+export const getCourseStudentCount = async (req, res, next) => {
+  try {
+    const { course } = req.params;
+
+    const result = await db.query(
+      `SELECT COUNT(*) AS student_count
+       FROM studentcoursedetails
+       WHERE course = $1`,
+      [course]
+    );
+
+    res.status(200).json({
+      success: true,
+      course,
+      student_count: parseInt(result.rows[0].student_count, 10)
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
