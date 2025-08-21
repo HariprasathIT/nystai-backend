@@ -1,6 +1,6 @@
 import express from 'express';
 import { uploadFields } from '../middleware/uploadMiddleware.js';
-import { deleteStudent, getAllStudents, getCompletedStudentsCount, getStudentById, getStudentsCount, insertStudentWithProof, updateStudentWithProof } from '../controllers/blobController.js';
+import { deleteStudent, getAllStudents, getCompletedStudentsCount, getCourseStudentCount, getStudentById, getStudentsCount, getStudentsCountByCourse, insertStudentWithProof, updateStudentWithProof } from '../controllers/blobController.js';
 import { handleValidationstudentInsert, validateStudent } from '../middleware/validateStudent.js';
 
 
@@ -32,5 +32,11 @@ router.get('/students-count', getStudentsCount);
 // Get completed student count
 router.get('/get-completed-students-count', getCompletedStudentsCount);
 
+// get course student count
+router.get("/count/:course_enrolled", getCourseStudentCount);
 
+// Pie chart API - Students count per course
+router.get("/students/course-counts", getStudentsCountByCourse);
+
+``
 export default router;

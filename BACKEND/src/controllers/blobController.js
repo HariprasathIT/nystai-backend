@@ -496,27 +496,72 @@ export const getCompletedStudentsCount = async (req, res, next) => {
 };
 
 
-
 // Get student count for a particular course
-// This function retrieves the count of students enrolled in a specific course
 export const getCourseStudentCount = async (req, res, next) => {
   try {
-    const { course } = req.params;
+    const { course_enrolled } = req.params; // example: /api/students/count/IOT
 
     const result = await db.query(
       `SELECT COUNT(*) AS student_count
        FROM studentcoursedetails
-       WHERE course = $1`,
-      [course]
+       WHERE course_enrolled = $1`,
+      [course_enrolled]
     );
+
+    const count = parseInt(result.rows[0].student_count, 10);
+
+    if (count === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No students found for course: ${course_enrolled}`
+      });
+    }
 
     res.status(200).json({
       success: true,
-      course,
-      student_count: parseInt(result.rows[0].student_count, 10)
+      message: "Student count fetched successfully",
+      data: {
+        course_enrolled,
+        student_count: count
+      }
     });
+
   } catch (err) {
     next(err);
   }
 };
 
+
+// ✅ Get student count grouped by course_enrolled
+export const getStudentsCountByCourse = async (req, res, next) => {
+  try {
+    const result = await db.query(`
+      SELECT course_enrolled, COUNT(*) AS student_count
+      FROM studentcoursedetails
+      GROUP BY course_enrolled
+    `);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No courses found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Student counts per course fetched successfully",
+      data: result.rows.map(row => ({
+        course: row.course_enrolled,
+        student_count: parseInt(row.student_count, 10),
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      error: "Something went wrong",
+      detail: err.message,
+    });
+  }
+};
