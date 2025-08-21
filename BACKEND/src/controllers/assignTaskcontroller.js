@@ -440,26 +440,28 @@ export const viewAssignmentPage = async (req, res) => {
 
     // Return as HTML page
     res.send(`
-      <div style="font-family: Arial; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-        <h2 style="color: #2c3e50;">📚 Assignment Details</h2>
-        <p><strong>Title:</strong> ${task.task_title}</p>
-        <p><strong>Description:</strong> ${task.task_description || "No description provided"}</p>
-        <p><strong>Course:</strong> ${task.course}</p>
-        <p><strong>Batch:</strong> ${task.batch}</p>
-        <p><strong>Due Date:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
-        <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
-        <br/>
+  <div style="font-family: Arial; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+    <h2 style="color: #2c3e50;">📚 Assignment Details</h2>
+    <p><strong>Title:</strong> ${task.task_title}</p>
+    <p><strong>Description:</strong> ${task.task_description || "No description provided"}</p>
+    <p><strong>Course:</strong> ${task.course}</p>
+    <p><strong>Batch:</strong> ${task.batch}</p>
+    <p><strong>Due Date:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
+    <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
+    <br/>
 
-      <form action="https://nystai-backend.onrender.com/student/tasks/submit" method="POST" enctype="multipart/form-data">
-          <label for="file">📂 Upload Your Work:</label><br/>
-          <input type="file" name="file" accept="image/*,application/pdf" required />
-          <br/><br/>
-          <button type="submit" style="padding: 8px 16px; background:#27ae60; color:white; border:none; border-radius:5px; cursor:pointer;">
-            Submit Assignment
-          </button>
-        </form>
-      </div>
-    `);
+    <form action="https://nystai-backend.onrender.com/student/tasks/assignmentuploads/${task.task_id}/${student_id}/submit" 
+          method="POST" enctype="multipart/form-data">
+        <label for="file">📂 Upload Your Work:</label><br/>
+        <input type="file" name="file" accept="image/*,application/pdf" required />
+        <br/><br/>
+        <button type="submit" style="padding: 8px 16px; background:#27ae60; color:white; border:none; border-radius:5px; cursor:pointer;">
+          Submit Assignment
+        </button>
+    </form>
+  </div>
+`);
+
   } catch (err) {
     console.error(err);
     res.status(500).send("<h2>Something went wrong</h2>");
