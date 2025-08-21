@@ -498,70 +498,101 @@ export const getCompletedStudentsCount = async (req, res, next) => {
 
 // Get student count for a particular course
 export const getCourseStudentCount = async (req, res, next) => {
-  try {
-    const { course_enrolled } = req.params; // example: /api/students/count/IOT
+    try {
+        const { course_enrolled } = req.params; // example: /api/students/count/IOT
 
-    const result = await db.query(
-      `SELECT COUNT(*) AS student_count
+        const result = await db.query(
+            `SELECT COUNT(*) AS student_count
        FROM studentcoursedetails
        WHERE course_enrolled = $1`,
-      [course_enrolled]
-    );
+            [course_enrolled]
+        );
 
-    const count = parseInt(result.rows[0].student_count, 10);
+        const count = parseInt(result.rows[0].student_count, 10);
 
-    if (count === 0) {
-      return res.status(404).json({
-        success: false,
-        message: `No students found for course: ${course_enrolled}`
-      });
+        if (count === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No students found for course: ${course_enrolled}`
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Student count fetched successfully",
+            data: {
+                course_enrolled,
+                student_count: count
+            }
+        });
+
+    } catch (err) {
+        next(err);
     }
-
-    res.status(200).json({
-      success: true,
-      message: "Student count fetched successfully",
-      data: {
-        course_enrolled,
-        student_count: count
-      }
-    });
-
-  } catch (err) {
-    next(err);
-  }
 };
 
 
-// ✅ Get student count grouped by course_enrolled
+// Get student count grouped by course_enrolled
 export const getStudentsCountByCourse = async (req, res, next) => {
-  try {
-    const result = await db.query(`
+    try {
+        const result = await db.query(`
       SELECT course_enrolled, COUNT(*) AS student_count
       FROM studentcoursedetails
       GROUP BY course_enrolled
     `);
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No courses found",
-      });
-    }
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No courses found",
+            });
+        }
 
-    res.status(200).json({
-      success: true,
-      message: "Student counts per course fetched successfully",
-      data: result.rows.map(row => ({
-        course: row.course_enrolled,
-        student_count: parseInt(row.student_count, 10),
-      })),
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      error: "Something went wrong",
-      detail: err.message,
-    });
-  }
+        res.status(200).json({
+            success: true,
+            message: "Student counts per course fetched successfully",
+            data: result.rows.map(row => ({
+                course: row.course_enrolled,
+                student_count: parseInt(row.student_count, 10),
+            })),
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            error: "Something went wrong",
+            detail: err.message,
+        });
+    }
+};
+
+
+// Get last 6 months student joining count
+export const getLastSixMonthsStudentCount = async (req, res) => {
+    try {
+        const query = `
+      SELECT TO_CHAR(DATE_TRUNC('month', join_date), 'Mon YYYY') AS month,
+             COUNT(*) AS student_count
+      FROM studentcoursedetails
+      WHERE join_date >= (CURRENT_DATE - INTERVAL '6 months')
+      GROUP BY DATE_TRUNC('month', join_date)
+      ORDER BY DATE_TRUNC('month', join_date);
+    `;
+
+        const result = await db.query(query);
+
+        return res.status(200).json({
+            success: true,
+            data: result.rows.map(row => ({
+                month: row.month,
+                student_count: parseInt(row.student_count, 10)
+            }))
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            error: "Something went wrong",
+            detail: err.message
+        });
+    }
 };
