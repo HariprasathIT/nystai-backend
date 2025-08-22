@@ -1,5 +1,5 @@
 import express from "express";
-import { addRemarkToSubmission, assignTaskToBatch, deleteAssignedTask, getAllAssignedTasks, getAllTaskSubmissions, getMailSentStudents, getMarkAsDoneStudents, getSingleAssignedTask, getStudentSingleTaskSubmission, getStudentTaskUploads, markTaskAsCompleted, markTaskAsDone, submitAssignment, viewAssignmentPage } from '../controllers/assignTaskcontroller.js';
+import { addRemarkToSubmission, assignTaskToBatch, deleteAssignedTask, getAllAssignedTasks, getAllTaskSubmissions, getMailSentStudents, getMarkAsDoneStudents, getSingleAssignedTask, getStudentSingleTaskSubmission, getStudentTaskSubmissions, getStudentTaskUploads, markTaskAsCompleted, markTaskAsDone, submitAssignment, viewAssignmentPage } from '../controllers/assignTaskcontroller.js';
 import multer from 'multer';
 import { AssignTaskInputValidator, handleAssignTaskValidation } from "../middleware/taskvalidator.js";
 const upload = multer();
@@ -30,6 +30,8 @@ router.get("/task/:taskId/mailsent", getMailSentStudents);
 
 // Task Submitted Students Mail List
 router.get("/all-tasks-submissions", getAllTaskSubmissions);
+
+router.get("/:studentId/submissions", getStudentTaskSubmissions);
 
 // Task Submitted Single Student Mail List
 router.get("/task/:taskId/student/:studentId", getStudentSingleTaskSubmission);

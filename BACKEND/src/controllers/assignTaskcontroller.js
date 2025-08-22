@@ -291,7 +291,48 @@ export const getAllTaskSubmissions = async (req, res, next) => {
   }
 };
 
+// ✅ Get latest submission info for a specific student
+export const getStudentTaskSubmissions = async (req, res, next) => {
+  const { studentId } = req.params;
 
+  try {
+    const query = `
+      SELECT DISTINCT ON (sts.task_id)
+        c.course_enrolled,
+        t.task_title,
+        s.last_name,
+        s.name,
+        d.passport_photo_url,
+        c.batch,
+        e.sent_at
+      FROM student_task_submissions_uploads sts
+      JOIN studentspersonalinformation s 
+        ON sts.student_id = s.student_id
+      JOIN studentcoursedetails c 
+        ON s.student_id = c.student_id
+      JOIN student_batch_tasks t 
+        ON sts.task_id = t.task_id
+      LEFT JOIN student_task_emails e 
+        ON e.student_id = s.student_id 
+       AND e.task_id = t.task_id
+      LEFT JOIN student_proof_documents d 
+        ON s.student_id = d.student_id
+      WHERE sts.student_id = $1
+      ORDER BY sts.task_id, sts.submitted_at DESC
+    `;
+
+    const result = await pool.query(query, [studentId]);
+
+    res.status(200).json({
+      success: true,
+      count: result.rows.length,
+      data: result.rows,
+    });
+  } catch (err) {
+    console.error("❌ Error fetching student submissions:", err);
+    next(err);
+  }
+};
 
 
 
@@ -342,6 +383,7 @@ export const getStudentSingleTaskSubmission = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 
