@@ -37,7 +37,7 @@ router.get("/count/:course_enrolled", getCourseStudentCount);
 
 // Pie chart API - Students count per course
 router.get("/students/course-counts", getStudentsCountByCourse);
-``
+
 //  Bar chart API: student counts grouped by month
 router.get("/students/last-six-months", getLastSixMonthsStudentCount);
 

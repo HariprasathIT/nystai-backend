@@ -38,9 +38,9 @@ export const assignTaskToBatch = async (req, res, next) => {
           task_title,
           task_description,
           due_date,
-          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${task.task_id}`,
-          doneLink: `https://nystai-backend.onrender.com/Students-Tasks/mark-task-done/${task.task_id}/${student_id}`
-        });
+          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${task.task_id}`
+        }, true); // <-- true to show Mark as Done button
+
 
         // Insert "sent" status into tracking table
         await pool.query(
@@ -256,6 +256,46 @@ export const getMarkAsDoneStudents = async (req, res, next) => {
 };
 
 
+
+// Get all submissions
+export const getAllTaskSubmissions = async (req, res, next) => {
+  try {
+    const result = await pool.query(`
+      SELECT DISTINCT ON (sts.student_id, sts.task_id)
+        c.course_enrolled,
+        t.task_title,
+        s.last_name,
+        s.name,
+        d.passport_photo_url,
+        c.batch,
+        e.sent_at
+      FROM student_task_submissions_uploads sts
+      JOIN studentspersonalinformation s ON sts.student_id = s.student_id
+      JOIN studentcoursedetails c ON s.student_id = c.student_id
+      JOIN student_batch_tasks t ON sts.task_id = t.task_id
+      LEFT JOIN student_task_emails e 
+        ON e.student_id = s.student_id AND e.task_id = t.task_id
+      LEFT JOIN student_proof_documents d
+        ON s.student_id = d.student_id
+      ORDER BY sts.student_id, sts.task_id, sts.submitted_at DESC
+    `);
+
+    res.status(200).json({
+      success: true,
+      count: result.rows.length,
+      data: result.rows
+    });
+  } catch (err) {
+    console.error("Error fetching task submissions:", err);
+    next(err);
+  }
+};
+
+
+
+
+
+
 // Get a particular student's submission for a task
 export const getStudentSingleTaskSubmission = async (req, res, next) => {
   try {
@@ -330,7 +370,8 @@ export const getStudentTaskUploads = async (req, res) => {
        INNER JOIN student_batch_tasks t 
           ON t.task_id = u.task_id
        WHERE u.task_id = $1 AND u.student_id = $2
-       ORDER BY u.submitted_at DESC`,
+       ORDER BY u.submitted_at DESC
+       LIMIT 1`,
       [taskId, studentId]
     );
 
@@ -355,6 +396,87 @@ export const getStudentTaskUploads = async (req, res) => {
   }
 };
 
+
+export const markTaskAsCompleted = async (req, res, next) => {
+  const { taskId, studentId } = req.params;
+
+  try {
+    // 1. Update task as completed in DB
+    const updateResult = await pool.query(
+      `UPDATE student_task_submissions_uploads
+       SET completed = TRUE
+       WHERE task_id = $1 AND student_id = $2
+       RETURNING *`,
+      [taskId, studentId]
+    );
+
+    if (updateResult.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No submission found for student ${studentId} on task ${taskId}`,
+      });
+    }
+
+    const submission = updateResult.rows[0];
+
+    // 2. Fetch student email and task info
+    const studentRes = await pool.query(
+      `SELECT 
+      spi.email, 
+      spi.name, 
+      spi.last_name, 
+      t.task_title, 
+      t.course, 
+      t.due_date,
+      t.task_description
+   FROM studentspersonalinformation spi
+   JOIN student_task_submissions_uploads sts
+       ON sts.student_id = spi.student_id
+   JOIN student_batch_tasks t
+       ON t.task_id = sts.task_id
+   WHERE sts.task_id = $1 AND sts.student_id = $2`,
+      [taskId, studentId]
+    );
+
+
+
+    if (studentRes.rowCount > 0) {
+      const { email, name, last_name, task_title, course, due_date, task_description } = studentRes.rows[0];
+
+      const formattedDueDate = new Date(due_date).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+
+      // 3. Send completed email
+      await sendBulkEmails(
+        email,
+        `✅ Task Completed: ${task_title}`,
+        {
+          studentName: `${name} ${last_name}`,
+          task_title,
+          course,
+          due_date: formattedDueDate,
+          task_description
+        },
+        false, // hide Mark as Done button
+        "✅ Task Completed Successfully! Thank you for submitting your assignment."
+      );
+
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Task marked as completed and email sent successfully",
+      // submission
+    });
+
+  } catch (error) {
+    console.error("Error marking task as completed:", error);
+    next(error);
+  }
+};
 
 
 
@@ -510,3 +632,89 @@ export const submitAssignment = async (req, res, next) => {
     next(error);
   }
 };
+
+
+
+// Add/Update remark for a student's submission and send email notification
+export const addRemarkToSubmission = async (req, res, next) => {
+  try {
+    const { taskId, studentId } = req.params;
+    const { remark } = req.body;
+
+    // 1. Update remark in DB
+    const result = await pool.query(
+      `UPDATE student_task_submissions_uploads
+       SET remark = $1
+       WHERE task_id = $2 AND student_id = $3
+       RETURNING *`,
+      [remark, taskId, studentId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No submission found for student ${studentId} on task ${taskId}`,
+      });
+    }
+
+    const updatedSubmission = result.rows[0];
+
+    // 2. Get student email + task details ( added task_description)
+    const studentRes = await pool.query(
+      `SELECT spi.email,
+              spi.name,
+              spi.last_name,
+              t.task_title,
+              t.task_description,  
+              t.due_date,
+              t.course
+       FROM studentspersonalinformation spi
+       JOIN student_task_submissions_uploads s 
+            ON s.student_id = spi.student_id
+       JOIN student_batch_tasks t 
+            ON t.task_id = s.task_id
+       WHERE s.task_id = $1 AND s.student_id = $2`,
+      [taskId, studentId]
+    );
+
+    if (studentRes.rowCount > 0) {
+      const { email, name, last_name, task_title, task_description, course, due_date } =
+        studentRes.rows[0];
+
+      const formattedDueDate = new Date(due_date).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+
+      // 3. Send remark email
+      await sendBulkEmails(
+        email,
+        `📝 Remark for your Task: ${task_title}`,
+        {
+          studentName: `${name} ${last_name}`,
+          task_title,
+          course,
+          due_date: formattedDueDate,
+          task_description,
+          remark,
+          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${taskId}`,
+        },
+        true // <-- show Mark as Done button
+      );
+    }
+
+    res.json({
+      success: true,
+      message: "Remark Sended Successfully",
+      remark: result.rows[0].remark
+    });
+
+  } catch (error) {
+    console.error("Error adding remark:", error);
+    next(error);
+  }
+};
+
+
+

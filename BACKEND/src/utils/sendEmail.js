@@ -42,9 +42,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 
-export const sendBulkEmails = async (to, subject, data) => {
+export const sendBulkEmails = async (to, subject, data, showMarkDone = false, completedMessage = "") => {
   const html = `
- <div style="font-family: Arial, sans-serif; background-color: #fcf9f3; padding: 20px; color: #333;">
+<div style="font-family: Arial, sans-serif; background-color: #fcf9f3; padding: 20px; color: #333;">
   <img src="cid:nystailogo@cid" alt="Nystai Logo" style="height: 60px; margin-bottom: 20px;" />
 
   <h2 style="font-size: 22px; color: #1f3e23;">📘 Course: ${data.course}</h2>
@@ -56,23 +56,27 @@ export const sendBulkEmails = async (to, subject, data) => {
   })}</h3>
 
   <p style="line-height: 1.6; font-size: 16px; margin-top: 20px;">
-    ${data.task_description}
+    ${data.task_description || ""}
   </p>
 
- <div style="margin: 30px 0;">
-<a href="${data.viewLink || "#"}" style="display: inline-block; margin-bottom: 10px;">
-  <button style="background: #f6c200; color: #1f3e23; border: none; padding: 12px 24px; font-size: 16px; border-radius: 5px;">
-    View Assignment
-  </button>
-</a>
-<a href="${data.doneLink || "#"}" style="display: inline-block;">
-  <button style="background: #f6c200; color: #1f3e23; border: none; padding: 12px 24px; font-size: 16px; border-radius: 5px;">
-    Mark as Done
-  </button>
-</a>
+  ${data.remark ? `
+  <p style="line-height: 1.6; font-size: 16px; margin-top: 20px; color: #d9534f;">
+    <strong>📝 Remark:</strong> ${data.remark}
+  </p>` : ""}
 
-</div>
+  ${completedMessage ? `
+  <p style="line-height: 1.6; font-size: 16px; margin-top: 20px; color: #1f3e23;">
+    <strong>${completedMessage}</strong>
+  </p>` : ""}
 
+  ${showMarkDone ? `
+  <div style="margin: 30px 0;">
+    <a href="${data.viewLink || "#"}" style="display: inline-block; margin-bottom: 10px;">
+      <button style="background: #f6c200; color: #1f3e23; border: none; padding: 12px 24px; font-size: 16px; border-radius: 5px;">
+        Mark as Done
+      </button>
+    </a>
+  </div>` : ""}
 
   <hr style="border-top: 1px solid #f6c200; margin: 30px 0;" />
 
@@ -90,7 +94,7 @@ export const sendBulkEmails = async (to, subject, data) => {
     +91 81899 77700
   </p>
 </div>
-  `;
+`;
 
   await transporter.sendMail({
     from: `"Nystai Institute" <${process.env.EMAIL_USER}>`,
@@ -106,4 +110,7 @@ export const sendBulkEmails = async (to, subject, data) => {
     ],
   });
 };
+
+
+
 
