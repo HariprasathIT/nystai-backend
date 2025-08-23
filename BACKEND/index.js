@@ -51,6 +51,7 @@ import Nystaicoursesroutes from './src/routes/Nystaicoursesroutes.js';
 import pricingPlanRoutes from './src/routes/Pricingroutes.js';
 import tutorRoutes from './src/routes/tutorRoutes.js';
 import StudentTasks from './src/routes/assignTaskroutes.js'
+import certificateroutes from './src/routes/certificateroutes.js';
 
 const app = express();
 
@@ -79,6 +80,7 @@ app.use('/Allcourses', Nystaicoursesroutes);
 app.use('/pricing-plans', pricingPlanRoutes);
 app.use('/NystaiTutors', tutorRoutes);
 app.use('/Students-Tasks', StudentTasks);
+app.use('/studentscertificates', certificateroutes)
 
 // Use only one error handler - your custom one or inline
 app.use(errorHandler);
