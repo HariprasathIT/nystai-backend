@@ -3,6 +3,8 @@ import { sendBulkEmails } from "../utils/sendEmail.js";
 import { put } from "@vercel/blob";
 import db from "../config/db.js";
 import { v4 as uuidv4 } from "uuid";
+import { verifyAssignmentToken } from "../utils/token.js";
+ 
 
 // This Function is for Creating a Task, Emailing Students, and Tracking Email Status
 export const assignTaskToBatch = async (req, res, next) => {
@@ -435,41 +437,49 @@ export const markTaskAsCompleted = async (req, res, next) => {
 // This Function is for Viewing Assignment Page
 export const viewAssignmentPageWithToken = async (req, res, next) => {
   const { token } = req.params;
-
+ 
   try {
-    // Fetch task using token
+    // 1. Verify JWT
+    const decoded = verifyAssignmentToken(token);
+    if (!decoded) {
+      return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    }
+ 
+    const { taskId, studentId } = decoded;
+ 
+    // 2. Fetch task from DB
     const result = await pool.query(
       `SELECT task_id, task_title, task_description, course, batch, due_date, assigned_at
        FROM student_batch_tasks
-       WHERE access_token = $1`,
-      [token]
+       WHERE task_id = $1`,
+      [taskId]
     );
-
+ 
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: "Invalid or expired token" });
+      return res.status(404).json({ success: false, message: "Task not found" });
     }
-
+ 
     const task = result.rows[0];
-
-    // Return JSON for frontend
+ 
+    // 3. Return task info + studentId for submissions
     res.status(200).json({
       success: true,
       task: {
-        task_id: task.task_id,         // Keep task_id for DB operations
+        task_id: task.task_id,
         title: task.task_title,
         description: task.task_description,
         course: task.course,
         batch: task.batch,
         due_date: task.due_date,
         assigned_at: task.assigned_at,
-      }
+      },
+      studentId, // 👈 important for when student uploads submission
     });
   } catch (err) {
-    console.error(err);
+    console.error("Error in viewAssignmentPageWithToken:", err);
     res.status(500).json({ success: false, message: "Something went wrong" });
   }
 };
-
 
 
 
@@ -569,6 +579,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
         month: "short",
         year: "numeric",
       });
+      
 
       // 3. Send remark email
       await sendBulkEmails(
