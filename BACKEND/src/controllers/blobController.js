@@ -3,6 +3,8 @@ import { put } from '@vercel/blob';
 import asyncHandler from 'express-async-handler';
 import { generateStudentRegisterNumber } from '../utils/generateStudentID.js';
 import generateAndUploadQR from '../utils/generateAndUploadQR.js';
+import { generateCertificateId } from "../utils/generateCertificateId.js";
+
 
 // Insering a new student with proof documents
 export const insertStudentWithProof = asyncHandler(async (req, res) => {
@@ -288,7 +290,7 @@ export const getStudentById = async (req, res) => {
 
 
 // This function updates a student's details along with their proof documents
-// It handles file uploads, updates personal information, course details, and generates a QR code if
+// It handles file uploads, updates personal information, course details, and generates a QR code and certificate ID if completed
 export const updateStudentWithProof = async (req, res) => {
     const client = await db.connect();
 
@@ -341,6 +343,7 @@ export const updateStudentWithProof = async (req, res) => {
 
         await client.query('BEGIN');
 
+        // Upload proof documents if provided
         const uploadedUrls = {};
         const docFields = ['passport_photo', 'pan_card', 'aadhar_card', 'sslc_marksheet'];
 
@@ -358,6 +361,7 @@ export const updateStudentWithProof = async (req, res) => {
             }
         }
 
+        // Update personal information
         await client.query(
             `UPDATE studentspersonalinformation 
             SET name = $1, last_name = $2, dob = $3, gender = $4, email = $5, 
@@ -372,6 +376,7 @@ export const updateStudentWithProof = async (req, res) => {
             ]
         );
 
+        // Update course details
         await client.query(
             `UPDATE studentcoursedetails 
             SET department_stream = $1, course_duration = $2, join_date = $3, 
@@ -383,6 +388,7 @@ export const updateStudentWithProof = async (req, res) => {
             ]
         );
 
+        // Update proof documents if any new files uploaded
         if (Object.keys(uploadedUrls).length > 0) {
             const updateFields = [];
             const values = [];
@@ -404,26 +410,36 @@ export const updateStudentWithProof = async (req, res) => {
             );
         }
 
+        // Generate certificate ID and QR if certificate_status is completed
         if (certificate_status === 'completed') {
             const regResult = await client.query(
-                'SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1',
+                'SELECT studentregisternumber, course_enrolled FROM studentcoursedetails WHERE student_id = $1',
                 [student_id]
             );
 
-            const studentRegisterNumber = regResult.rows[0]?.studentregisternumber;
+            const { studentregisternumber, course_enrolled } = regResult.rows[0];
 
-            if (studentRegisterNumber) {
-                const qrUrl = await generateAndUploadQR(studentRegisterNumber, student_id);
+            if (studentregisternumber && course_enrolled) {
+                // Generate certificate ID (CERT2025NYST07 format)
+                const certificateId = generateCertificateId(studentregisternumber);
+
+
+                // Generate QR using certificate ID
+                const qrUrl = await generateAndUploadQR(certificateId, student_id);
+
+                // Update studentsuniqueqrcode table
                 await client.query(
-                    'UPDATE studentsuniqueqrcode SET certificate_status = $1, student_qr_url = $2 WHERE student_id = $3',
-                    ['completed', qrUrl, student_id]
+                    `UPDATE studentsuniqueqrcode 
+                     SET certificate_status = $1, student_qr_url = $2, certificate_id = $3 
+                     WHERE student_id = $4`,
+                    ['completed', qrUrl, certificateId, student_id]
                 );
             }
         }
 
         await client.query('COMMIT');
 
-        // ✅ Fetch updated student details and remove unwanted fields
+        // Fetch updated student details
         const updated = await client.query(
             `SELECT spi.*, scd.*, spd.*, suq.*
              FROM studentspersonalinformation spi
@@ -454,6 +470,7 @@ export const updateStudentWithProof = async (req, res) => {
         client.release();
     }
 };
+
 
 
 // Get total students count
@@ -600,38 +617,38 @@ export const getLastSixMonthsStudentCount = async (req, res) => {
 
 // Get Single Student QR by student_id
 export const getStudentQR = async (req, res, next) => {
-  const { student_id } = req.params;
+    const { student_id } = req.params;
 
-  try {
-    const result = await db.query(
-      "SELECT * FROM studentsuniqueqrcode WHERE student_id = $1",
-      [student_id]
-    );
+    try {
+        const result = await db.query(
+            "SELECT * FROM studentsuniqueqrcode WHERE student_id = $1",
+            [student_id]
+        );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "QR not found for this student" });
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "QR not found for this student" });
+        }
+
+        const qrData = result.rows[0];
+
+        if (qrData.certificate_status !== "completed") {
+            return res.status(200).json({
+                success: false,
+                message: "Certificate not yet generated",
+                certificate_status: qrData.certificate_status,
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                student_id: qrData.student_id,
+                certificate_status: qrData.certificate_status,
+                student_qr_url: qrData.student_qr_url,
+                certificate_url: qrData.certificate_url,
+            },
+        });
+    } catch (err) {
+        next(err);
     }
-
-    const qrData = result.rows[0];
-
-    if (qrData.certificate_status !== "completed") {
-      return res.status(200).json({
-        success: false,
-        message: "Certificate not yet generated",
-        certificate_status: qrData.certificate_status,
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: {
-        student_id: qrData.student_id,
-        certificate_status: qrData.certificate_status,
-        student_qr_url: qrData.student_qr_url,
-        certificate_url: qrData.certificate_url,
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
 };
