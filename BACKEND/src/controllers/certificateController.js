@@ -1,57 +1,49 @@
 import pool from "../config/db.js";
 
-// Generate certificate (mark completed + store cert URL)
-export const generateCertificate = async (req, res, next) => {
-  const { studentId } = req.params;
-  const { certificate_url } = req.body; // frontend or utils will pass a PDF/image URL
-
+// Verify Certificate
+export const verifyCertificate = async (req, res, next) => {
   try {
-    const updateQuery = `
-      UPDATE studentsuniqueqrcode
-      SET certificate_status = 'completed', certificate_url = $1
-      WHERE student_id = $2
-      RETURNING *;
-    `;
+    const { certificateId, aadhar, email, pan, phone } = req.body;
 
-    const { rows } = await pool.query(updateQuery, [certificate_url, studentId]);
+    // 1. Find student by certificateId
+    const certResult = await pool.query(
+      `SELECT spi.student_id, spi.aadhar_number, spi.email, spi.pan_number, spi.phone
+       FROM studentsuniqueqrcode suq
+       JOIN studentspersonalinformation spi 
+       ON suq.student_id = spi.student_id
+       WHERE suq.certificate_id = $1 AND suq.certificate_status = 'completed'`,
+      [certificateId]
+    );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Student not found" });
+    if (certResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "Certificate not found or not active" });
     }
 
-    res.json({ success: true, message: "Certificate generated", data: rows[0] });
-  } catch (err) {
-    console.error("❌ Error generating certificate:", err);
-    next(err);
-  }
-};
+    const student = certResult.rows[0];
 
-// Scan QR → Get Certificate
-export const getCertificateByQR = async (req, res, next) => {
-  const { studentId } = req.params;
+    // 2. Check if at least 2 fields match
+    let matches = 0;
+    if (aadhar && aadhar === student.aadhar_number) matches++;
+    if (email && email === student.email) matches++;
+    if (pan && pan === student.pan_number) matches++;
+    if (phone && phone === student.phone) matches++;
 
-  try {
-    const query = `
-      SELECT spi.student_id, spi.name, spi.last_name, spi.email, spi.phone,
-             scd.course_enrolled, scd.batch, scd.tutor,
-             spd.passport_photo_url,
-             suq.certificate_status, suq.student_qr_url, suq.certificate_url
-      FROM studentspersonalinformation spi
-      JOIN studentcoursedetails scd ON spi.student_id = scd.student_id
-      JOIN student_proof_documents spd ON spi.student_id = spd.student_id
-      JOIN studentsuniqueqrcode suq ON spi.student_id = suq.student_id
-      WHERE spi.student_id = $1;
-    `;
-
-    const { rows } = await pool.query(query, [studentId]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Certificate not found" });
+    if (matches < 2) {
+      return res.status(401).json({ success: false, error: "Verification failed" });
     }
 
-    res.json({ success: true, certificate: rows[0] });
+    // 3. Success → return student + certificate data
+    res.json({
+      success: true,
+      message: "Verification successful",
+      certificate: {
+        certificateId,
+        studentId: student.student_id,
+        // you can include more details for certificate rendering
+      }
+    });
+
   } catch (err) {
-    console.error("❌ Error fetching certificate:", err);
     next(err);
   }
 };
