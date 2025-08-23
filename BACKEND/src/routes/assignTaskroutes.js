@@ -14,7 +14,7 @@ import {
     submitAssignment,
     submitAssignmentByToken,
     verifyTaskToken,
-    viewAssignmentPage
+    viewAssignmentPageWithToken
 } from '../controllers/assignTaskcontroller.js';
 import { AssignTaskInputValidator, handleAssignTaskValidation } from "../middleware/taskvalidator.js";
 
@@ -29,8 +29,8 @@ router.get("/assigned-tasks", getAllAssignedTasks);
 router.get("/assigned-tasks/:task_id", getSingleAssignedTask);
 router.delete("/delete-tasks/:task_id", deleteAssignedTask);
 
-// Task assignment page in Gmail
-router.get('/assignment/:task_id', viewAssignmentPage);
+// Student accesses their assignment via a token link
+router.get('/assignment/:token', viewAssignmentPageWithToken);
 
 // Task submissions Single student 
 router.post("/assignmentuploads/:task_id/:student_id/submit", upload.single("file"), submitAssignment);

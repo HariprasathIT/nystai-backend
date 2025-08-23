@@ -433,50 +433,43 @@ export const markTaskAsCompleted = async (req, res, next) => {
 
 
 // This Function is for Viewing Assignment Page
-export const viewAssignmentPage = async (req, res) => {
-  const { task_id } = req.params;
+export const viewAssignmentPageWithToken = async (req, res, next) => {
+  const { token } = req.params;
 
   try {
+    // Fetch task using token
     const result = await pool.query(
-      `SELECT task_title, task_description, course, batch, due_date, assigned_at
+      `SELECT task_id, task_title, task_description, course, batch, due_date, assigned_at
        FROM student_batch_tasks
-       WHERE task_id = $1`,
-      [task_id]
+       WHERE access_token = $1`,
+      [token]
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).send("<h2>Task not found</h2>");
+      return res.status(404).json({ success: false, message: "Invalid or expired token" });
     }
 
     const task = result.rows[0];
 
-    // Return as HTML page
-    res.send(`
-      <div style="font-family: Arial; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-        <h2 style="color: #2c3e50;">📚 Assignment Details</h2>
-        <p><strong>Title:</strong> ${task.task_title}</p>
-        <p><strong>Description:</strong> ${task.task_description || "No description provided"}</p>
-        <p><strong>Course:</strong> ${task.course}</p>
-        <p><strong>Batch:</strong> ${task.batch}</p>
-        <p><strong>Due Date:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
-        <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
-        <br/>
-
-      <form action="https://nystai-backend.onrender.com/student/tasks/submit" method="POST" enctype="multipart/form-data">
-          <label for="file">📂 Upload Your Work:</label><br/>
-          <input type="file" name="file" accept="image/*,application/pdf" required />
-          <br/><br/>
-          <button type="submit" style="padding: 8px 16px; background:#27ae60; color:white; border:none; border-radius:5px; cursor:pointer;">
-            Submit Assignment
-          </button>
-        </form>
-      </div>
-    `);
+    // Return JSON for frontend
+    res.status(200).json({
+      success: true,
+      task: {
+        task_id: task.task_id,         // Keep task_id for DB operations
+        title: task.task_title,
+        description: task.task_description,
+        course: task.course,
+        batch: task.batch,
+        due_date: task.due_date,
+        assigned_at: task.assigned_at,
+      }
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).send("<h2>Something went wrong</h2>");
+    res.status(500).json({ success: false, message: "Something went wrong" });
   }
 };
+
 
 
 
