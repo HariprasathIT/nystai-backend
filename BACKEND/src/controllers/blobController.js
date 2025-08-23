@@ -3,6 +3,7 @@ import { put } from '@vercel/blob';
 import asyncHandler from 'express-async-handler';
 import { generateStudentRegisterNumber } from '../utils/generateStudentID.js';
 import generateAndUploadQR from '../utils/generateAndUploadQR.js';
+import { generateCertificateId } from "../utils/generateCertificateId.js";
 
 
 // Insering a new student with proof documents
