@@ -2,13 +2,14 @@ import pool from "../config/db.js";
 import { sendBulkEmails } from "../utils/sendEmail.js";
 import { put } from "@vercel/blob";
 import db from "../config/db.js";
+import { v4 as uuidv4 } from "uuid";
 
 // This Function is for Creating a Task, Emailing Students, and Tracking Email Status
 export const assignTaskToBatch = async (req, res, next) => {
   const { batch, course, task_title, task_description, due_date } = req.body;
 
   try {
-    // 1. Insert Task into DB
+    // 1️⃣ Insert Task
     const result = await pool.query(
       `INSERT INTO student_batch_tasks (batch, course, task_title, task_description, due_date)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
@@ -17,7 +18,7 @@ export const assignTaskToBatch = async (req, res, next) => {
 
     const task = result.rows[0];
 
-    // 2. Get Student Emails & IDs of the Batch
+    // 2️⃣ Get Students in Batch
     const emailQuery = await pool.query(
       `SELECT spi.email, spi.student_id
        FROM studentcoursedetails scd
@@ -28,21 +29,31 @@ export const assignTaskToBatch = async (req, res, next) => {
 
     const students = emailQuery.rows;
 
-    // 3. Send Emails and Log Status
+    // 3️⃣ Send Emails with unique token
     const sendPromises = students.map(async ({ email, student_id }) => {
       try {
-        // Send Email
+        const token = uuidv4(); // unique token for student
+
+        // Save token for this student (can be multiple students per task)
+        await pool.query(
+          `UPDATE student_batch_tasks
+           SET access_token = $1
+           WHERE task_id = $2`,
+          [token, task.task_id]
+        );
+
+        const viewLink = `http://localhost:5173/student-assignment/${token}`;
+
         await sendBulkEmails(email, `📚 New Task Assigned: ${task_title}`, {
           batch,
           course,
           task_title,
           task_description,
           due_date,
-          viewLink: `http://localhost:5173/Students-Tasks/assignment/${task.task_id}`
-        }, true); // <-- true to show Mark as Done button
+          viewLink
+        }, true);
 
-
-        // Insert "sent" status into tracking table
+        // Insert email status
         await pool.query(
           `INSERT INTO student_task_emails (task_id, student_id, email, email_status)
            VALUES ($1, $2, $3, 'sent')`,
@@ -50,8 +61,6 @@ export const assignTaskToBatch = async (req, res, next) => {
         );
       } catch (err) {
         console.error(`Failed to send email to ${email}`, err);
-
-        // Insert "failed" status into tracking table
         await pool.query(
           `INSERT INTO student_task_emails (task_id, student_id, email, email_status)
            VALUES ($1, $2, $3, 'failed')`,
@@ -64,7 +73,7 @@ export const assignTaskToBatch = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: "Task assigned, emails sent, and status recorded",
+      message: "Task assigned, emails sent, and status recorded with tokens",
       task
     });
   } catch (err) {
@@ -72,6 +81,7 @@ export const assignTaskToBatch = async (req, res, next) => {
     next(err);
   }
 };
+
 
 
 // This Function is for Get Api 
@@ -207,56 +217,6 @@ export const getMailSentStudents = async (req, res, next) => {
 
 
 
-// Get students who marked task as done
-// export const getMarkAsDoneStudents = async (req, res, next) => {
-//   try {
-//     const { taskId } = req.params;
-
-//     const result = await pool.query(
-//       `SELECT 
-//           s.student_id, 
-//           s.name, 
-//           s.last_name, 
-//           d.passport_photo_url,
-//           c.course_enrolled,
-//           c.batch,
-//           t.task_title,
-//           t.due_date,
-//           sub.submitted_at
-//        FROM studentspersonalinformation s
-//        JOIN student_task_submissions sub 
-//           ON s.student_id = sub.student_id
-//        JOIN studentcoursedetails c 
-//           ON s.student_id = c.student_id
-//        JOIN student_batch_tasks t 
-//           ON sub.task_id = t.task_id
-//       LEFT JOIN student_proof_documents d
-//           ON s.student_id = d.student_id
-//        WHERE sub.task_id = $1`,
-//       [taskId]
-//     );
-
-//     if (result.rowCount === 0) {
-//       return res.status(404).json({
-//         success: false,
-//         message: `No completed submissions found for task ID ${taskId}`
-//       });
-//     }
-
-//     res.status(200).json({
-//       success: true,
-//       count: result.rowCount,
-//       data: result.rows
-//     });
-
-//   } catch (error) {
-//     console.error("Error fetching completed task students:", error);
-//     next(error);
-//   }
-// };
-
-
-
 // Get all submissions
 export const getAllTaskSubmissions = async (req, res, next) => {
   try {
@@ -334,59 +294,6 @@ export const getTaskSubmissionsByTaskId = async (req, res, next) => {
     next(err);
   }
 };
-
-
-
-
-
-
-// Get a particular student's submission for a task
-// export const getStudentSingleTaskSubmission = async (req, res, next) => {
-//   try {
-//     const { taskId, studentId } = req.params;
-
-//     const result = await pool.query(
-//       `SELECT 
-//           s.name, 
-//           s.last_name, 
-//           d.passport_photo_url,
-//           c.course_enrolled,
-//           c.batch,
-//           t.task_title,
-//           t.task_description,
-//           t.due_date,
-//           sub.submitted_at
-//        FROM studentspersonalinformation s
-//        JOIN student_task_submissions sub 
-//           ON s.student_id = sub.student_id
-//        JOIN studentcoursedetails c 
-//           ON s.student_id = c.student_id
-//        JOIN student_batch_tasks t 
-//           ON sub.task_id = t.task_id
-//        LEFT JOIN student_proof_documents d
-//           ON s.student_id = d.student_id
-//        WHERE sub.task_id = $1 AND s.student_id = $2`,
-//       [taskId, studentId]
-//     );
-
-//     if (result.rowCount === 0) {
-//       return res.status(404).json({
-//         success: false,
-//         message: `No submission found for student ${studentId} in task ${taskId}`
-//       });
-//     }
-
-//     res.status(200).json({
-//       success: true,
-//       data: result.rows[0]
-//     });
-
-//   } catch (error) {
-//     console.error("Error fetching student submission:", error);
-//     next(error);
-//   }
-// };
-
 
 
 
@@ -522,68 +429,6 @@ export const markTaskAsCompleted = async (req, res, next) => {
     next(error);
   }
 };
-
-
-
-
-
-
-// This Function is for Updating a "Assignment Status" in GMAIL
-// Default : "pending"
-// Update : "Completed"
-// export const markTaskAsDone = async (req, res) => {
-//   const { task_id, student_id } = req.params;
-
-//   try {
-//     // Step 1: Insert into submission table (if not already submitted)
-//     await pool.query(
-//       `INSERT INTO student_task_submissions (task_id, student_id) VALUES ($1, $2)
-//        ON CONFLICT DO NOTHING`,
-//       [task_id, student_id]
-//     );
-
-//     // Step 2: Get the batch of the task
-//     const taskResult = await pool.query(
-//       `SELECT batch FROM student_batch_tasks WHERE task_id = $1`,
-//       [task_id]
-//     );
-//     if (taskResult.rowCount === 0) return res.status(404).send("Task not found");
-
-//     const batch = taskResult.rows[0].batch;
-
-//     // Step 3: Count how many students in that batch
-//     const studentCountRes = await pool.query(
-//       `SELECT COUNT(*) FROM studentcoursedetails WHERE batch = $1`,
-//       [batch]
-//     );
-//     const totalStudents = parseInt(studentCountRes.rows[0].count);
-
-//     // Step 4: Count submissions for this task
-//     const submissionCountRes = await pool.query(
-//       `SELECT COUNT(*) FROM student_task_submissions WHERE task_id = $1`,
-//       [task_id]
-//     );
-//     const submittedCount = parseInt(submissionCountRes.rows[0].count);
-
-//     // Step 5: If all submitted → update task as completed
-//     if (submittedCount === totalStudents) {
-//       await pool.query(
-//         `UPDATE student_batch_tasks SET mark_as_done = 'completed' WHERE task_id = $1`,
-//         [task_id]
-//       );
-//     }
-
-//     // Response
-//     res.send(`
-//       <h2 style="font-family: Arial; color: green;">✅ Marked as Done!</h2>
-//       <p>Thank you for submitting your task.</p>
-//     `);
-
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).send("Something went wrong.");
-//   }
-// };
 
 
 
@@ -763,3 +608,61 @@ export const addRemarkToSubmission = async (req, res, next) => {
 
 
 
+
+
+
+
+
+
+
+export const verifyTaskToken = async (req, res, next) => {
+  const { token } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT task_id, batch, course, task_title, task_description, due_date
+       FROM student_batch_tasks
+       WHERE access_token = $1`,
+      [token]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(403).json({ success: false, message: "Invalid or expired token" });
+    }
+
+    res.json({
+      success: true,
+      task: result.rows[0]
+    });
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
+};
+
+
+export const submitAssignmentByToken = async (req, res, next) => {
+  const { token } = req.params;
+
+  try {
+    // Get task_id and student_id via token
+    const result = await pool.query(
+      `SELECT task_id, student_id
+       FROM student_batch_tasks
+       WHERE access_token = $1`,
+      [token]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(403).json({ success: false, message: "Invalid token" });
+    }
+
+    req.params.task_id = result.rows[0].task_id;
+    req.params.student_id = result.rows[0].student_id;
+
+    await submitAssignment(req, res); // reuse existing submission logic
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
+};
