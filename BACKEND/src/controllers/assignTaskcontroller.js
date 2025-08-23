@@ -5,7 +5,7 @@ import db from "../config/db.js";
 import { v4 as uuidv4 } from "uuid";
 import { verifyAssignmentToken } from "../utils/jwttokens.js";
 import crypto from 'crypto';
- 
+
 
 // This Function is for Creating a Task, Emailing Students, and Tracking Email Status
 export const assignTaskToBatch = async (req, res, next) => {
@@ -431,36 +431,32 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
 
   try {
     const result = await pool.query(
-      `SELECT task_id, task_title, task_description, course, batch, due_date, assigned_at
-       FROM student_batch_tasks
-       WHERE access_token = $1`,
+      `SELECT * FROM student_batch_tasks WHERE access_token = $1`,
       [token]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: "Invalid or expired token" });
-    }
+    if (result.rowCount === 0) return res.status(404).send("<h2>Invalid or expired token</h2>");
 
     const task = result.rows[0];
 
-    // Return JSON for frontend to render
-    res.status(200).json({
-      success: true,
-      task: {
-        task_id: task.task_id,   // ✅ keep for submissions
-        title: task.task_title,
-        description: task.task_description,
-        course: task.course,
-        batch: task.batch,
-        due_date: task.due_date,
-        assigned_at: task.assigned_at
-      }
-    });
+    res.send(`
+      <div style="font-family: Arial; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h2>📚 Assignment Details</h2>
+        <p><strong>Title:</strong> ${task.task_title}</p>
+        <p><strong>Description:</strong> ${task.task_description || "No description"}</p>
+        <p><strong>Course:</strong> ${task.course}</p>
+        <p><strong>Batch:</strong> ${task.batch}</p>
+        <p><strong>Due Date:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
+        <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
+      </div>
+    `);
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: "Something went wrong" });
+    res.status(500).send("<h2>Something went wrong</h2>");
   }
 };
+
 
 
 
@@ -569,7 +565,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
         month: "short",
         year: "numeric",
       });
-      
+
 
       // 3. Send remark email
       await sendBulkEmails(
