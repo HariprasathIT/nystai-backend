@@ -80,7 +80,7 @@ app.use('/Allcourses', Nystaicoursesroutes);
 app.use('/pricing-plans', pricingPlanRoutes);
 app.use('/NystaiTutors', tutorRoutes);
 app.use('/Students-Tasks', StudentTasks);
-app.use('/studentscertificates', certificateroutes)
+app.use('/studentscertificates', certificateroutes);
 
 // Use only one error handler - your custom one or inline
 app.use(errorHandler);
