@@ -54,20 +54,8 @@ router.put("/tasks/:taskId/:studentId/remark", upload.none(), addRemarkToSubmiss
 // Task completion email
 router.post("/task/:taskId/student/:studentId/completed", markTaskAsCompleted);
 
-
-
-
 // Verify token endpoint
 router.get("/assignment/verify/:token", verifyTaskToken);
-
-// Submit assignment via token
-// router.post("/assignment/submit/:token", upload.single("file"), submitAssignmentByToken);
-
-
-
-
-
-
 
 
 export default router;

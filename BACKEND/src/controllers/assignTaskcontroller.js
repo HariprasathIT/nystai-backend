@@ -74,7 +74,6 @@ export const assignTaskToBatch = async (req, res, next) => {
 };
 
 
-
 // This Function is for Get Api 
 export const getAllAssignedTasks = async (req, res, next) => {
   try {
@@ -125,7 +124,6 @@ export const getSingleAssignedTask = async (req, res, next) => {
 };
 
 
-
 // This Function is for Deleting a Task
 export const deleteAssignedTask = async (req, res, next) => {
   const { task_id } = req.params;
@@ -155,7 +153,6 @@ export const deleteAssignedTask = async (req, res, next) => {
     });
   }
 };
-
 
 
 // Get students who received the task mail with profile image + course enrolled
@@ -205,9 +202,6 @@ export const getMailSentStudents = async (req, res, next) => {
 };
 
 
-
-
-
 // Get all submissions
 export const getAllTaskSubmissions = async (req, res, next) => {
   try {
@@ -243,7 +237,6 @@ export const getAllTaskSubmissions = async (req, res, next) => {
     next(err);
   }
 };
-
 
 
 // Get submissions for a specific task
@@ -285,9 +278,6 @@ export const getTaskSubmissionsByTaskId = async (req, res, next) => {
     next(err);
   }
 };
-
-
-
 
 
 // Get a student's uploaded submissions for a specific task
@@ -422,7 +412,6 @@ export const markTaskAsCompleted = async (req, res, next) => {
 };
 
 
-
 // Get Assignment by Token
 export const viewAssignmentPageByToken = async (req, res, next) => {
   try {
@@ -451,10 +440,6 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
     next(error);
   }
 };
-
-
-
-
 
 
 // This Function is for Submitting Assignment
@@ -505,8 +490,6 @@ export const submitAssignmentByToken = async (req, res, next) => {
     next(error);
   }
 };
-
-
 
 
 // Add/Update remark for a student's submission and send email notification
@@ -592,14 +575,6 @@ export const addRemarkToSubmission = async (req, res, next) => {
 };
 
 
-
-
-
-
-
-
-
-
 export const verifyTaskToken = async (req, res, next) => {
   const { token } = req.params;
 
@@ -625,29 +600,3 @@ export const verifyTaskToken = async (req, res, next) => {
   }
 };
 
-
-// export const submitAssignmentByToken = async (req, res, next) => {
-//   const { token } = req.params;
-
-//   try {
-//     // Get task_id and student_id via token
-//     const result = await pool.query(
-//       `SELECT task_id, student_id
-//        FROM student_batch_tasks
-//        WHERE access_token = $1`,
-//       [token]
-//     );
-
-//     if (result.rowCount === 0) {
-//       return res.status(403).json({ success: false, message: "Invalid token" });
-//     }
-
-//     req.params.task_id = result.rows[0].task_id;
-//     req.params.student_id = result.rows[0].student_id;
-
-//     await submitAssignment(req, res); // reuse existing submission logic
-//   } catch (err) {
-//     console.error(err);
-//     next(err);
-//   }
-// };
