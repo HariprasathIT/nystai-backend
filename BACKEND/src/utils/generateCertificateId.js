@@ -1,8 +1,12 @@
+// utils/certificate.js
 export const generateCertificateId = (studentRegisterNumber) => {
   const currentYear = new Date().getFullYear();
 
-  // Ensure last 2 digits padded (e.g., 7 -> 07)
-  const lastDigits = String(studentRegisterNumber).padStart(2, "0");
+  // 🔹 Extract only the last number(s) from the register number
+  const lastNumber = String(studentRegisterNumber).match(/\d+$/)?.[0] || "0";
 
-  return `CERT${currentYear}NYST${lastDigits}`;
+  // Always pad to 3 digits (e.g., 1 → 001, 23 → 023)
+  const padded = lastNumber.padStart(3, "0");
+
+  return `CERT${currentYear}NYST${padded}`;
 };
