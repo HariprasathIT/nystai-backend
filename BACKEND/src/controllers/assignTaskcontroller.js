@@ -2,8 +2,6 @@ import pool from "../config/db.js";
 import { sendBulkEmails } from "../utils/sendEmail.js";
 import { put } from "@vercel/blob";
 import db from "../config/db.js";
-import { v4 as uuidv4 } from "uuid";
-import { verifyAssignmentToken } from "../utils/jwttokens.js";
 import crypto from 'crypto';
 
 
@@ -425,17 +423,16 @@ export const markTaskAsCompleted = async (req, res, next) => {
 
 
 
-// This Function is for Viewing Assignment Page
+// Get Assignment by Token
 export const viewAssignmentPageByToken = async (req, res, next) => {
-  const { token } = req.params;
-
   try {
-    const result = await pool.query(
-      `SELECT * FROM student_batch_tasks WHERE access_token = $1`,
-      [token]
-    );
+    const { token } = req.params;
 
-    if (result.rowCount === 0) return res.status(404).send("<h2>Invalid or expired token</h2>");
+    const result = await pool.query("SELECT * FROM assignments WHERE token = $1", [token]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).send("<h3>❌ Assignment not found</h3>");
+    }
 
     const task = result.rows[0];
 
@@ -450,10 +447,8 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
         <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
       </div>
     `);
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("<h2>Something went wrong</h2>");
+  } catch (error) {
+    next(error);
   }
 };
 
