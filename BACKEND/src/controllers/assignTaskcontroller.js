@@ -3,7 +3,7 @@ import { sendBulkEmails } from "../utils/sendEmail.js";
 import { put } from "@vercel/blob";
 import db from "../config/db.js";
 import { v4 as uuidv4 } from "uuid";
-import { verifyAssignmentToken } from "../utils/token.js";
+import { verifyAssignmentToken } from "../utils/jwttokens.js";
  
 
 // This Function is for Creating a Task, Emailing Students, and Tracking Email Status
