@@ -41,7 +41,7 @@ export const assignTaskToBatch = async (req, res, next) => {
           task_title,
           task_description,
           due_date,
-          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}` // <-- token used here
+          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${student_id}`
         }, true);
 
         await pool.query(
