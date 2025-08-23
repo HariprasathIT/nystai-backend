@@ -66,13 +66,18 @@ export const verifyCertificate = async (req, res) => {
 };
 
 // Upload certificate for a student
+
 export const uploadCertificateForStudent = async (req, res) => {
   try {
-    const { studentId } = req.body;
+    const { studentId } = req.params; // ✅ get from route
     const file = req.file;
 
-    if (!studentId) return res.status(400).json({ success: false, error: "studentId is required" });
-    if (!file) return res.status(400).json({ success: false, error: "Certificate file is required" });
+    if (!studentId) {
+      return res.status(400).json({ success: false, error: "studentId is required in route" });
+    }
+    if (!file) {
+      return res.status(400).json({ success: false, error: "Certificate file is required" });
+    }
 
     // Check if student exists
     const studentCheck = await pool.query(
@@ -80,18 +85,20 @@ export const uploadCertificateForStudent = async (req, res) => {
       [studentId]
     );
 
-    if (studentCheck.rows.length === 0) return res.status(404).json({ success: false, error: "Student not found" });
+    if (studentCheck.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "Student not found" });
+    }
 
     const { studentregisternumber } = studentCheck.rows[0];
 
     // Generate certificate ID
     const certificateId = generateCertificateId(studentregisternumber);
 
-    // Upload certificate to Vercel Blob
+    // Upload to Vercel Blob
     const blob = await put(`certificates/${file.originalname}`, file.buffer, {
       access: "public",
       token: process.env.VERCEL_BLOB_RW_TOKEN,
-      addRandomSuffix: true
+      addRandomSuffix: true,
     });
 
     const certificateUrl = blob.url;
@@ -109,11 +116,10 @@ export const uploadCertificateForStudent = async (req, res) => {
       success: true,
       message: `Certificate uploaded successfully for student ID ${studentId}`,
       certificateId,
-      certificateUrl
+      certificateUrl,
     });
-
   } catch (err) {
-    console.error(err);
+    console.error("Error uploading certificate:", err);
     res.status(500).json({ success: false, error: "Server error", detail: err.message });
   }
 };

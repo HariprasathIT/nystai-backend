@@ -9,7 +9,7 @@ const upload = multer(); // memory storage for single file
 // Verify certificate (login page)
 router.post("/verify", upload.none(), verifyCertificate);
 
-// Upload certificate for student
-router.post("/upload", upload.single("certificate"), uploadCertificateForStudent);
+// ✅ studentId from route param instead of body
+router.post("/:studentId/upload", upload.single("certificate"), uploadCertificateForStudent);
 
 export default router;
