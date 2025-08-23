@@ -1,9 +1,9 @@
 // backend/controllers/certificateController.js
-import pool from "../config/db.js";// your postgres pool
-import { put } from '@vercel/blob';
+import pool from "../config/db.js"; // PostgreSQL pool
+import { put } from "@vercel/blob";
 import { generateCertificateId } from "../utils/generateCertificateId.js";
 
-
+// Verify certificate with 2 random fields
 export const verifyCertificate = async (req, res) => {
   try {
     const { certificateId, aadhar, email, pan, phone } = req.body;
@@ -12,9 +12,22 @@ export const verifyCertificate = async (req, res) => {
       return res.status(400).json({ success: false, error: "CertificateId is required" });
     }
 
-    // Find student by certificateId
+    // Collect submitted fields
+    const submittedFields = { aadhar, email, pan, phone };
+    const filledFields = Object.entries(submittedFields).filter(([_, value]) => value);
+
+    // Require exactly 2 fields
+    if (filledFields.length !== 2) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Exactly 2 fields must be provided", 
+        hint: "Enter any 2 of Aadhar, Email, PAN, or Phone"
+      });
+    }
+
+    // Fetch student by certificateId
     const result = await pool.query(
-      `SELECT spi.student_id, spi.aadhar_number, spi.email, spi.pan_number, spi.phone, 
+      `SELECT spi.student_id, spi.aadhar_number, spi.email, spi.pan_number, spi.phone,
               suq.certificate_id, suq.certificate_status, suq.certificate_url
        FROM studentsuniqueqrcode suq
        JOIN studentspersonalinformation spi ON suq.student_id = spi.student_id
@@ -28,18 +41,18 @@ export const verifyCertificate = async (req, res) => {
 
     const student = result.rows[0];
 
-    // Check at least 2 matches
+    // Validate submitted fields
     let matches = 0;
     if (aadhar && aadhar === student.aadhar_number) matches++;
     if (email && email === student.email) matches++;
     if (pan && pan === student.pan_number) matches++;
     if (phone && phone === student.phone) matches++;
 
-    if (matches < 2) {
-      return res.status(401).json({ success: false, error: "Verification failed" });
+    if (matches !== 2) {
+      return res.status(401).json({ success: false, error: "Verification failed: fields do not match" });
     }
 
-    // ✅ Success → send certificate URL
+    // Success → return certificate URL
     return res.json({
       success: true,
       certificateUrl: student.certificate_url,
@@ -48,14 +61,14 @@ export const verifyCertificate = async (req, res) => {
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, error: "Server error" });
+    res.status(500).json({ success: false, error: "Server error", detail: err.message });
   }
 };
 
-
+// Upload certificate for a student
 export const uploadCertificateForStudent = async (req, res) => {
   try {
-    const { studentId } = req.body; // 142
+    const { studentId } = req.body;
     const file = req.file;
 
     if (!studentId) return res.status(400).json({ success: false, error: "studentId is required" });
@@ -71,10 +84,10 @@ export const uploadCertificateForStudent = async (req, res) => {
 
     const { studentregisternumber } = studentCheck.rows[0];
 
-    // Generate certificate ID (e.g., CERT2025NYST003)
+    // Generate certificate ID
     const certificateId = generateCertificateId(studentregisternumber);
 
-    // Upload certificate file to Vercel Blob
+    // Upload certificate to Vercel Blob
     const blob = await put(`certificates/${file.originalname}`, file.buffer, {
       access: "public",
       token: process.env.VERCEL_BLOB_RW_TOKEN,
@@ -83,7 +96,7 @@ export const uploadCertificateForStudent = async (req, res) => {
 
     const certificateUrl = blob.url;
 
-    // UPSERT certificate info in studentsuniqueqrcode
+    // UPSERT into studentsuniqueqrcode
     await pool.query(
       `INSERT INTO studentsuniqueqrcode (student_id, certificate_id, certificate_url, certificate_status)
        VALUES ($1, $2, $3, $4)
