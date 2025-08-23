@@ -4,6 +4,7 @@ import asyncHandler from 'express-async-handler';
 import { generateStudentRegisterNumber } from '../utils/generateStudentID.js';
 import generateAndUploadQR from '../utils/generateAndUploadQR.js';
 
+
 // Insering a new student with proof documents
 export const insertStudentWithProof = asyncHandler(async (req, res) => {
     const client = await db.connect();
@@ -418,9 +419,9 @@ export const updateStudentWithProof = async (req, res) => {
             const { studentregisternumber, course_enrolled } = regResult.rows[0];
 
             if (studentregisternumber && course_enrolled) {
-                // Generate certificate ID
-                const year = new Date().getFullYear();
-                const certificateId = `NYST-${year}-${course_enrolled}-${studentregisternumber}`;
+                // Generate certificate ID (CERT2025NYST07 format)
+                const certificateId = generateCertificateId(studentregisternumber);
+
 
                 // Generate QR using certificate ID
                 const qrUrl = await generateAndUploadQR(certificateId, student_id);
