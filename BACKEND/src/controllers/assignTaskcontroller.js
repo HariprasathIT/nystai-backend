@@ -4,6 +4,7 @@ import { put } from "@vercel/blob";
 import db from "../config/db.js";
 import { v4 as uuidv4 } from "uuid";
 import { verifyAssignmentToken } from "../utils/jwttokens.js";
+import crypto from 'crypto';
  
 
 // This Function is for Creating a Task, Emailing Students, and Tracking Email Status
@@ -11,16 +12,19 @@ export const assignTaskToBatch = async (req, res, next) => {
   const { batch, course, task_title, task_description, due_date } = req.body;
 
   try {
-    // 1️⃣ Insert Task
+    // Generate a secure token
+    const accessToken = crypto.randomBytes(20).toString('hex');
+
+    // Insert Task into DB with token
     const result = await pool.query(
-      `INSERT INTO student_batch_tasks (batch, course, task_title, task_description, due_date)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [batch, course, task_title, task_description, due_date]
+      `INSERT INTO student_batch_tasks (batch, course, task_title, task_description, due_date, access_token)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [batch, course, task_title, task_description, due_date, accessToken]
     );
 
     const task = result.rows[0];
 
-    // 2️⃣ Get Students in Batch
+    // Send emails using token link
     const emailQuery = await pool.query(
       `SELECT spi.email, spi.student_id
        FROM studentcoursedetails scd
@@ -31,31 +35,17 @@ export const assignTaskToBatch = async (req, res, next) => {
 
     const students = emailQuery.rows;
 
-    // 3️⃣ Send Emails with unique token
     const sendPromises = students.map(async ({ email, student_id }) => {
       try {
-        const token = uuidv4(); // unique token for student
-
-        // Save token for this student (can be multiple students per task)
-        await pool.query(
-          `UPDATE student_batch_tasks
-           SET access_token = $1
-           WHERE task_id = $2`,
-          [token, task.task_id]
-        );
-
-        const viewLink = `http://localhost:5173/student-assignment/${token}`;
-
         await sendBulkEmails(email, `📚 New Task Assigned: ${task_title}`, {
           batch,
           course,
           task_title,
           task_description,
           due_date,
-          viewLink
+          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}` // <-- token used here
         }, true);
 
-        // Insert email status
         await pool.query(
           `INSERT INTO student_task_emails (task_id, student_id, email, email_status)
            VALUES ($1, $2, $3, 'sent')`,
@@ -63,6 +53,7 @@ export const assignTaskToBatch = async (req, res, next) => {
         );
       } catch (err) {
         console.error(`Failed to send email to ${email}`, err);
+
         await pool.query(
           `INSERT INTO student_task_emails (task_id, student_id, email, email_status)
            VALUES ($1, $2, $3, 'failed')`,
@@ -75,7 +66,7 @@ export const assignTaskToBatch = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: "Task assigned, emails sent, and status recorded with tokens",
+      message: "Task assigned, emails sent, and status recorded",
       task
     });
   } catch (err) {
@@ -435,48 +426,38 @@ export const markTaskAsCompleted = async (req, res, next) => {
 
 
 // This Function is for Viewing Assignment Page
-export const viewAssignmentPageWithToken = async (req, res, next) => {
+export const viewAssignmentPageByToken = async (req, res, next) => {
   const { token } = req.params;
- 
+
   try {
-    // 1. Verify JWT
-    const decoded = verifyAssignmentToken(token);
-    if (!decoded) {
-      return res.status(401).json({ success: false, message: "Invalid or expired token" });
-    }
- 
-    const { taskId, studentId } = decoded;
- 
-    // 2. Fetch task from DB
     const result = await pool.query(
       `SELECT task_id, task_title, task_description, course, batch, due_date, assigned_at
        FROM student_batch_tasks
-       WHERE task_id = $1`,
-      [taskId]
+       WHERE access_token = $1`,
+      [token]
     );
- 
+
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: "Task not found" });
+      return res.status(404).json({ success: false, message: "Invalid or expired token" });
     }
- 
+
     const task = result.rows[0];
- 
-    // 3. Return task info + studentId for submissions
+
+    // Return JSON for frontend to render
     res.status(200).json({
       success: true,
       task: {
-        task_id: task.task_id,
+        task_id: task.task_id,   // ✅ keep for submissions
         title: task.task_title,
         description: task.task_description,
         course: task.course,
         batch: task.batch,
         due_date: task.due_date,
-        assigned_at: task.assigned_at,
-      },
-      studentId, // 👈 important for when student uploads submission
+        assigned_at: task.assigned_at
+      }
     });
   } catch (err) {
-    console.error("Error in viewAssignmentPageWithToken:", err);
+    console.error(err);
     res.status(500).json({ success: false, message: "Something went wrong" });
   }
 };
@@ -484,31 +465,39 @@ export const viewAssignmentPageWithToken = async (req, res, next) => {
 
 
 
+
 // This Function is for Submitting Assignment
-export const submitAssignment = async (req, res, next) => {
+export const submitAssignmentByToken = async (req, res, next) => {
   try {
-    // read from URL params instead of body
-    const { student_id, task_id } = req.params;
-    const file = req.file; // comes from multer
+    const { token, student_id } = req.params;
+    const file = req.file;
+
+    // Get task_id from token
+    const taskRes = await pool.query(
+      `SELECT task_id FROM student_batch_tasks WHERE access_token = $1`,
+      [token]
+    );
+
+    if (taskRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Invalid token" });
+    }
+
+    const task_id = taskRes.rows[0].task_id;
 
     let fileUrl = null;
-
     if (file) {
-      // Upload file to Vercel Blob
       const blob = await put(
         `Assignments_Students_uploads/${student_id}_${task_id}_${file.originalname}`,
         file.buffer,
         {
           access: "public",
           token: process.env.VERCEL_BLOB_RW_TOKEN,
-          addRandomSuffix: true,
+          addRandomSuffix: true
         }
       );
-
       fileUrl = blob.url;
     }
 
-    // Save fileUrl in DB with assignment submission
     await db.query(
       `INSERT INTO student_task_submissions_uploads (student_id, task_id, file_url, submitted_at) 
        VALUES ($1, $2, $3, NOW())`,
@@ -518,13 +507,14 @@ export const submitAssignment = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: "Assignment submitted successfully",
-      fileUrl,
+      fileUrl
     });
 
   } catch (error) {
     next(error);
   }
 };
+
 
 
 
@@ -645,28 +635,28 @@ export const verifyTaskToken = async (req, res, next) => {
 };
 
 
-export const submitAssignmentByToken = async (req, res, next) => {
-  const { token } = req.params;
+// export const submitAssignmentByToken = async (req, res, next) => {
+//   const { token } = req.params;
 
-  try {
-    // Get task_id and student_id via token
-    const result = await pool.query(
-      `SELECT task_id, student_id
-       FROM student_batch_tasks
-       WHERE access_token = $1`,
-      [token]
-    );
+//   try {
+//     // Get task_id and student_id via token
+//     const result = await pool.query(
+//       `SELECT task_id, student_id
+//        FROM student_batch_tasks
+//        WHERE access_token = $1`,
+//       [token]
+//     );
 
-    if (result.rowCount === 0) {
-      return res.status(403).json({ success: false, message: "Invalid token" });
-    }
+//     if (result.rowCount === 0) {
+//       return res.status(403).json({ success: false, message: "Invalid token" });
+//     }
 
-    req.params.task_id = result.rows[0].task_id;
-    req.params.student_id = result.rows[0].student_id;
+//     req.params.task_id = result.rows[0].task_id;
+//     req.params.student_id = result.rows[0].student_id;
 
-    await submitAssignment(req, res); // reuse existing submission logic
-  } catch (err) {
-    console.error(err);
-    next(err);
-  }
-};
+//     await submitAssignment(req, res); // reuse existing submission logic
+//   } catch (err) {
+//     console.error(err);
+//     next(err);
+//   }
+// };

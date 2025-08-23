@@ -11,10 +11,9 @@ import {
     getStudentTaskUploads,
     getTaskSubmissionsByTaskId,
     markTaskAsCompleted,
-    submitAssignment,
     submitAssignmentByToken,
     verifyTaskToken,
-    viewAssignmentPageWithToken
+    viewAssignmentPageByToken,
 } from '../controllers/assignTaskcontroller.js';
 import { AssignTaskInputValidator, handleAssignTaskValidation } from "../middleware/taskvalidator.js";
 
@@ -30,10 +29,11 @@ router.get("/assigned-tasks/:task_id", getSingleAssignedTask);
 router.delete("/delete-tasks/:task_id", deleteAssignedTask);
 
 // Student accesses their assignment via a token link
-router.get('/assignment/:token', viewAssignmentPageWithToken);
+router.get('/assignment/:token', viewAssignmentPageByToken);
 
 // Task submissions Single student 
-router.post("/assignmentuploads/:task_id/:student_id/submit", upload.single("file"), submitAssignment);
+router.post("/assignment/submit/:token/:student_id", upload.single("file"), submitAssignmentByToken);
+
 
 // Emails sent list
 router.get("/task/:taskId/mailsent", getMailSentStudents);
@@ -61,7 +61,7 @@ router.post("/task/:taskId/student/:studentId/completed", markTaskAsCompleted);
 router.get("/assignment/verify/:token", verifyTaskToken);
 
 // Submit assignment via token
-router.post("/assignment/submit/:token", upload.single("file"), submitAssignmentByToken);
+// router.post("/assignment/submit/:token", upload.single("file"), submitAssignmentByToken);
 
 
 
