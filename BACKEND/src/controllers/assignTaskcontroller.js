@@ -262,6 +262,8 @@ export const getAllTaskSubmissions = async (req, res, next) => {
   try {
     const result = await pool.query(`
       SELECT DISTINCT ON (sts.student_id, sts.task_id)
+        sts.student_id,
+        sts.task_id,
         c.course_enrolled,
         t.task_title,
         s.last_name,
@@ -290,6 +292,7 @@ export const getAllTaskSubmissions = async (req, res, next) => {
     next(err);
   }
 };
+
 
 
 // Get submissions for a specific task
