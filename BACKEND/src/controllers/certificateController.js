@@ -1,27 +1,31 @@
-import pool from "../config/db.js";
+// backend/controllers/certificateController.js
+import pool from "../config/db.js";// your postgres pool
 
-// Verify Certificate
-export const verifyCertificate = async (req, res, next) => {
+export const verifyCertificate = async (req, res) => {
   try {
     const { certificateId, aadhar, email, pan, phone } = req.body;
 
-    // 1. Find student by certificateId
-    const certResult = await pool.query(
-      `SELECT spi.student_id, spi.aadhar_number, spi.email, spi.pan_number, spi.phone
+    if (!certificateId) {
+      return res.status(400).json({ success: false, error: "CertificateId is required" });
+    }
+
+    // Find student by certificateId
+    const result = await pool.query(
+      `SELECT spi.student_id, spi.aadhar_number, spi.email, spi.pan_number, spi.phone, 
+              suq.certificate_id, suq.certificate_status, suq.certificate_url
        FROM studentsuniqueqrcode suq
-       JOIN studentspersonalinformation spi 
-       ON suq.student_id = spi.student_id
-       WHERE suq.certificate_id = $1 AND suq.certificate_status = 'completed'`,
+       JOIN studentspersonalinformation spi ON suq.student_id = spi.student_id
+       WHERE suq.certificate_id = $1 AND suq.certificate_status='completed'`,
       [certificateId]
     );
 
-    if (certResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: "Certificate not found or not active" });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "Certificate not found or inactive" });
     }
 
-    const student = certResult.rows[0];
+    const student = result.rows[0];
 
-    // 2. Check if at least 2 fields match
+    // Check at least 2 matches
     let matches = 0;
     if (aadhar && aadhar === student.aadhar_number) matches++;
     if (email && email === student.email) matches++;
@@ -32,18 +36,15 @@ export const verifyCertificate = async (req, res, next) => {
       return res.status(401).json({ success: false, error: "Verification failed" });
     }
 
-    // 3. Success → return student + certificate data
-    res.json({
+    // ✅ Success → send certificate URL
+    return res.json({
       success: true,
-      message: "Verification successful",
-      certificate: {
-        certificateId,
-        studentId: student.student_id,
-        // you can include more details for certificate rendering
-      }
+      certificateUrl: student.certificate_url,
+      certificateId: student.certificate_id
     });
 
   } catch (err) {
-    next(err);
+    console.error(err);
+    res.status(500).json({ success: false, error: "Server error" });
   }
 };
