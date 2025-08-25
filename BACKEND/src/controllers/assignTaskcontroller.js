@@ -415,40 +415,32 @@ export const markTaskAsCompleted = async (req, res, next) => {
 // Get Assignment by Token
 export const viewAssignmentPageByToken = async (req, res, next) => {
   try {
-    const { token, studentId } = req.params;
+    const { token, studentId } = req.params; // studentId is optional
 
-    // 1. Get task details
-    const taskRes = await pool.query(
+    const result = await pool.query(
       `SELECT * FROM student_batch_tasks WHERE access_token = $1`,
       [token]
     );
-    if (taskRes.rowCount === 0) {
+
+    if (result.rows.length === 0) {
       return res.status(404).send("<h3>❌ Assignment not found</h3>");
     }
-    const task = taskRes.rows[0];
 
-    // 2. Get student info
-    const studentRes = await pool.query(
-      `SELECT name, last_name, email
-       FROM studentspersonalinformation
-       WHERE student_id = $1`,
-      [studentId]
-    );
-    if (studentRes.rowCount === 0) {
-      return res.status(404).send("<h3>❌ Student not found</h3>");
+    const task = result.rows[0];
+
+    // You can optionally show the student's uploaded file if studentId is provided
+    let uploadResult = null;
+    if (studentId) {
+      const uploadRes = await pool.query(
+        `SELECT file_url, submitted_at FROM student_task_submissions_uploads
+         WHERE student_id = $1 AND task_id = $2
+         ORDER BY submitted_at DESC
+         LIMIT 1`,
+        [studentId, task.task_id]
+      );
+      uploadResult = uploadRes.rows[0] || null;
     }
-    const student = studentRes.rows[0];
 
-    // 3. Get submission if exists
-    const submissionRes = await pool.query(
-      `SELECT file_url, remark
-       FROM student_task_submissions_uploads
-       WHERE student_id = $1 AND task_id = $2`,
-      [studentId, task.task_id]
-    );
-    const submission = submissionRes.rows[0] || null;
-
-    // 4. Render HTML
     res.send(`
       <div style="font-family: Arial; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
         <h2>📚 Assignment Details</h2>
@@ -458,31 +450,15 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
         <p><strong>Batch:</strong> ${task.batch}</p>
         <p><strong>Due Date:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
         <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
-
-        <h3>👤 Student Info</h3>
-        <p><strong>Name:</strong> ${student.name} ${student.last_name}</p>
-        <p><strong>Email:</strong> ${student.email}</p>
-
-        ${submission ? `
-          <h3>📎 Your Submission</h3>
-          <p><strong>File:</strong> <a href="${submission.file_url}" target="_blank">View File</a></p>
-          <p><strong>Remark:</strong> ${submission.remark || "No remark yet"}</p>
-        ` : `<p><em>You have not uploaded this assignment yet.</em></p>`}
-
-        ${submission && submission.remark ? `
-          <form action="/Students-Tasks/mark-as-done/${task.task_id}/${studentId}" method="POST">
-            <button type="submit">✅ Mark as Done</button>
-          </form>
-        ` : ''}
+        ${uploadResult ? `<p><strong>Your Uploaded File:</strong> <a href="${uploadResult.file_url}" target="_blank">View</a></p>` : ''}
+        ${uploadResult ? `<p><strong>Submitted At:</strong> ${new Date(uploadResult.submitted_at).toLocaleString()}</p>` : ''}
       </div>
     `);
-
   } catch (error) {
-    console.error("Error viewing assignment page:", error);
+    console.error("Error in viewAssignmentPageByToken:", error);
     next(error);
   }
 };
-
 
 
 // This Function is for Submitting Assignment
@@ -536,7 +512,6 @@ export const submitAssignmentByToken = async (req, res, next) => {
 
 
 // Add/Update remark for a student's submission and send email notification
-// Add/Update remark for a student's submission and send email notification
 export const addRemarkToSubmission = async (req, res, next) => {
   try {
     const { taskId, studentId } = req.params;
@@ -560,16 +535,15 @@ export const addRemarkToSubmission = async (req, res, next) => {
 
     const updatedSubmission = result.rows[0];
 
-    // 2. Get student email + task details including access token
+    // 2. Get student email + task details ( added task_description)
     const studentRes = await pool.query(
       `SELECT spi.email,
               spi.name,
               spi.last_name,
               t.task_title,
-              t.task_description,
+              t.task_description,  
               t.due_date,
-              t.course,
-              t.access_token
+              t.course
        FROM studentspersonalinformation spi
        JOIN student_task_submissions_uploads s 
             ON s.student_id = spi.student_id
@@ -580,7 +554,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
     );
 
     if (studentRes.rowCount > 0) {
-      const { email, name, last_name, task_title, task_description, course, due_date, access_token } =
+      const { email, name, last_name, task_title, task_description, course, due_date } =
         studentRes.rows[0];
 
       const formattedDueDate = new Date(due_date).toLocaleDateString("en-GB", {
@@ -589,9 +563,8 @@ export const addRemarkToSubmission = async (req, res, next) => {
         year: "numeric",
       });
 
-      // 3. Send remark email with correct "Mark as Done" link
-      const markAsDoneLink = `https://nystai-backend.onrender.com/Students-Tasks/assignment/${access_token}/${studentId}`;
 
+      // 3. Send remark email
       await sendBulkEmails(
         email,
         `📝 Remark for your Task: ${task_title}`,
@@ -602,7 +575,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
           due_date: formattedDueDate,
           task_description,
           remark,
-          viewLink: markAsDoneLink
+          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${taskId}`,
         },
         true // <-- show Mark as Done button
       );
@@ -610,8 +583,8 @@ export const addRemarkToSubmission = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: "Remark sent successfully",
-      remark: updatedSubmission.remark
+      message: "Remark Sended Successfully",
+      remark: result.rows[0].remark
     });
 
   } catch (error) {
@@ -619,7 +592,6 @@ export const addRemarkToSubmission = async (req, res, next) => {
     next(error);
   }
 };
-
 
 
 export const verifyTaskToken = async (req, res, next) => {
