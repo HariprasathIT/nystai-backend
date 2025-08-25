@@ -1,12 +1,29 @@
 // utils/certificate.js
-export const generateCertificateId = (studentRegisterNumber) => {
+export const generateCertificateId = async (pool) => {
   const currentYear = new Date().getFullYear();
 
-  // 🔹 Extract only the last number(s) from the register number
-  const lastNumber = String(studentRegisterNumber).match(/\d+$/)?.[0] || "0";
+  // 🔹 Fetch the latest certificate_id for the current year
+  const result = await pool.query(
+    `SELECT certificate_id 
+     FROM studentsuniqueqrcode 
+     WHERE certificate_id LIKE $1
+     ORDER BY certificate_id DESC 
+     LIMIT 1`,
+    [`CERT${currentYear}NYST%`]
+  );
 
-  // Always pad to 3 digits (e.g., 1 → 001, 23 → 023)
-  const padded = lastNumber.padStart(3, "0");
+  let nextNumber = 1;
+
+  if (result.rows.length > 0) {
+    const lastId = result.rows[0].certificate_id; // e.g. CERT2025NYST007
+    const match = lastId.match(/(\d{3})$/); // extract last 3 digits
+    if (match) {
+      nextNumber = parseInt(match[1], 10) + 1;
+    }
+  }
+
+  // Always pad to 3 digits (001, 002, …)
+  const padded = String(nextNumber).padStart(3, "0");
 
   return `CERT${currentYear}NYST${padded}`;
 };
