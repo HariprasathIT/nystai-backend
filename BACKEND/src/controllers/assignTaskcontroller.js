@@ -417,11 +417,7 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
   try {
     const { token } = req.params;
 
-    // Query from student_batch_tasks instead of assignments
-    const result = await pool.query(
-      "SELECT * FROM student_batch_tasks WHERE access_token = $1",
-      [token]
-    );
+    const result = await pool.query("SELECT * FROM assignments WHERE token = $1", [token]);
 
     if (result.rows.length === 0) {
       return res.status(404).send("<h3>❌ Assignment not found</h3>");
@@ -560,7 +556,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
           due_date: formattedDueDate,
           task_description,
           remark,
-          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${accessToken}`,
+          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${taskId}`,
         },
         true // <-- show Mark as Done button
       );
