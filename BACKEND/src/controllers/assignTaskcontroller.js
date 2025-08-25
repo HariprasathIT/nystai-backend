@@ -41,7 +41,7 @@ export const assignTaskToBatch = async (req, res, next) => {
           task_title,
           task_description,
           due_date,
-          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${student_id}`
+          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${studentId}`
         }, true);
 
         await pool.query(
@@ -516,7 +516,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
 
     const updatedSubmission = result.rows[0];
 
-    // 2. Get student email + task details ( added task_description)
+    // 2. Get student email + task details (added task_description)
     const studentRes = await pool.query(
       `SELECT spi.email,
               spi.name,
@@ -544,8 +544,17 @@ export const addRemarkToSubmission = async (req, res, next) => {
         year: "numeric",
       });
 
+      // 🔑 3. Fetch the access_token for this task
+      const tokenRes = await pool.query(
+        `SELECT access_token 
+         FROM student_batch_tasks 
+         WHERE task_id = $1`,
+        [taskId]
+      );
 
-      // 3. Send remark email
+      const accessToken = tokenRes.rows[0]?.access_token;
+
+      // 4. Send remark email with correct link
       await sendBulkEmails(
         email,
         `📝 Remark for your Task: ${task_title}`,
@@ -556,7 +565,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
           due_date: formattedDueDate,
           task_description,
           remark,
-          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${taskId}`,
+          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${studentId}`,
         },
         true // <-- show Mark as Done button
       );
@@ -564,7 +573,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: "Remark Sended Successfully",
+      message: "Remark sent successfully",
       remark: result.rows[0].remark
     });
 
@@ -573,6 +582,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 export const verifyTaskToken = async (req, res, next) => {
