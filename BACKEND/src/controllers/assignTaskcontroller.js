@@ -516,7 +516,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
 
     const updatedSubmission = result.rows[0];
 
-    // 2. Get student email + task details (added task_description)
+    // 2. Get student email + task details ( added task_description)
     const studentRes = await pool.query(
       `SELECT spi.email,
               spi.name,
@@ -544,17 +544,8 @@ export const addRemarkToSubmission = async (req, res, next) => {
         year: "numeric",
       });
 
-      // 🔑 3. Fetch the access_token for this task
-      const tokenRes = await pool.query(
-        `SELECT access_token 
-         FROM student_batch_tasks 
-         WHERE task_id = $1`,
-        [taskId]
-      );
 
-      const accessToken = tokenRes.rows[0]?.access_token;
-
-      // 4. Send remark email with correct link
+      // 3. Send remark email
       await sendBulkEmails(
         email,
         `📝 Remark for your Task: ${task_title}`,
@@ -565,7 +556,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
           due_date: formattedDueDate,
           task_description,
           remark,
-          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${studentId}`,
+          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${taskId}`,
         },
         true // <-- show Mark as Done button
       );
@@ -573,7 +564,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: "Remark sent successfully",
+      message: "Remark Sended Successfully",
       remark: result.rows[0].remark
     });
 
@@ -582,7 +573,6 @@ export const addRemarkToSubmission = async (req, res, next) => {
     next(error);
   }
 };
-
 
 
 export const verifyTaskToken = async (req, res, next) => {
