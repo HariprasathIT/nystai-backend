@@ -5,7 +5,7 @@ import { generateStudentRegisterNumber } from '../utils/generateStudentID.js';
 import generateAndUploadQR from '../utils/generateAndUploadQR.js';
 import { generateCertificateId } from "../utils/generateCertificateId.js";
 
-``
+
 // Insering a new student with proof documents
 export const insertStudentWithProof = asyncHandler(async (req, res) => {
     const client = await db.connect();

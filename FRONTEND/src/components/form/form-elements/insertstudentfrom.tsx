@@ -63,6 +63,7 @@ export default function StudentAddForm() {
       data.append(key, formData[key as keyof typeof formData]);
     }
 
+    // Check required documents
     if (
       !documents.passport_photo ||
       !documents.pan_card ||
@@ -86,27 +87,27 @@ export default function StudentAddForm() {
 
       const result = await response.json();
 
-      if (!response.ok) {
+
+      if (!response.ok || result.success === false) {
+        if (result.errors) {
+          // Handle backend validation errors
+          const fieldErrors: { [key: string]: string } = {};
+          result.errors.forEach((error: { param: string; msg: string }) => {
+            fieldErrors[error.param] = error.msg;
+          });
+          setErrors(fieldErrors);
+          Object.values(fieldErrors).forEach(err => toast.error(err));
+          return;
+        }
+
         throw new Error(result.error || "Upload failed");
       }
 
       toast.success("Student inserted! ID: " + result.student_id);
-    } catch (err: any) {
-      if (err.response && err.response.status === 422) {
-        const backendErrors = err.response.data.errors;
-        const fieldErrors: { [key: string]: string } = {};
-
-        backendErrors.forEach((error: { param: string; msg: string }) => {
-          fieldErrors[error.param] = error.msg;
-        });
-
-        setErrors(fieldErrors); // Update state with field-specific errors
-        toast.error("Please fix the highlighted errors");
-      } else {
-        toast.error("Error uploading student");
-      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error uploading student");
     }
-
   };
 
 
@@ -534,7 +535,7 @@ export default function StudentAddForm() {
                   )}
                 </div>
               </div>
-              
+
 
             </div>
 

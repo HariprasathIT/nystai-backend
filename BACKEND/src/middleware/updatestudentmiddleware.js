@@ -145,14 +145,7 @@ export const validateUpdateStudentCourse = [
     .trim(),
 
   body('course_enrolled')
-    .trim()
-    .custom((value) => {
-      const allowedCourses = ['IOT', 'CCTV'];
-      if (!allowedCourses.includes(value)) {
-        throw new Error('Course must be either IOT or CCTV (uppercase only)');
-      }
-      return true;
-    }),
+    .trim(),
 
   body('batch')
     .trim(),

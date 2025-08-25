@@ -171,8 +171,7 @@ export const validateStudent = [
 
     body('course_enrolled')
         .trim().bail()
-        .notEmpty().withMessage('Course enrolled is required')
-        .isIn(['IOT', 'CCTV']).withMessage('Course must be either IOT or CCTV'),
+        .notEmpty().withMessage('Course enrolled is required'),
 
     body('batch')
         .trim().bail()
