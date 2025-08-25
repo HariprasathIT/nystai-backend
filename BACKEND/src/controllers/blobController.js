@@ -5,7 +5,7 @@ import { generateStudentRegisterNumber } from '../utils/generateStudentID.js';
 import generateAndUploadQR from '../utils/generateAndUploadQR.js';
 import { generateCertificateId } from "../utils/generateCertificateId.js";
 
-
+``
 // Insering a new student with proof documents
 export const insertStudentWithProof = asyncHandler(async (req, res) => {
     const client = await db.connect();
@@ -410,31 +410,18 @@ export const updateStudentWithProof = async (req, res) => {
             );
         }
 
-        // Generate certificate ID and QR if certificate_status is completed
-        if (certificate_status === 'completed') {
-            const regResult = await client.query(
-                'SELECT studentregisternumber, course_enrolled FROM studentcoursedetails WHERE student_id = $1',
-                [student_id]
+        // 🔹 Generate certificate + QR if status is completed
+        if (certificate_status === "completed") {
+            const certificateId = await generateCertificateId(client); // pass db client
+
+            const qrUrl = await generateAndUploadQR(certificateId, student_id);
+
+            await client.query(
+                `UPDATE studentsuniqueqrcode 
+                 SET certificate_status=$1, student_qr_url=$2, certificate_id=$3 
+                 WHERE student_id=$4`,
+                ["completed", qrUrl, certificateId, student_id]
             );
-
-            const { studentregisternumber, course_enrolled } = regResult.rows[0];
-
-            if (studentregisternumber && course_enrolled) {
-                // Generate certificate ID (CERT2025NYST07 format)
-                const certificateId = generateCertificateId(studentregisternumber);
-
-
-                // Generate QR using certificate ID
-                const qrUrl = await generateAndUploadQR(certificateId, student_id);
-
-                // Update studentsuniqueqrcode table
-                await client.query(
-                    `UPDATE studentsuniqueqrcode 
-                     SET certificate_status = $1, student_qr_url = $2, certificate_id = $3 
-                     WHERE student_id = $4`,
-                    ['completed', qrUrl, certificateId, student_id]
-                );
-            }
         }
 
         await client.query('COMMIT');
