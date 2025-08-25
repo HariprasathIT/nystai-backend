@@ -415,32 +415,40 @@ export const markTaskAsCompleted = async (req, res, next) => {
 // Get Assignment by Token
 export const viewAssignmentPageByToken = async (req, res, next) => {
   try {
-    const { token, studentId } = req.params; // studentId is optional
+    const { token, studentId } = req.params;
 
-    const result = await pool.query(
+    // 1. Get task details
+    const taskRes = await pool.query(
       `SELECT * FROM student_batch_tasks WHERE access_token = $1`,
       [token]
     );
-
-    if (result.rows.length === 0) {
+    if (taskRes.rowCount === 0) {
       return res.status(404).send("<h3>❌ Assignment not found</h3>");
     }
+    const task = taskRes.rows[0];
 
-    const task = result.rows[0];
-
-    // You can optionally show the student's uploaded file if studentId is provided
-    let uploadResult = null;
-    if (studentId) {
-      const uploadRes = await pool.query(
-        `SELECT file_url, submitted_at FROM student_task_submissions_uploads
-         WHERE student_id = $1 AND task_id = $2
-         ORDER BY submitted_at DESC
-         LIMIT 1`,
-        [studentId, task.task_id]
-      );
-      uploadResult = uploadRes.rows[0] || null;
+    // 2. Get student info
+    const studentRes = await pool.query(
+      `SELECT name, last_name, email
+       FROM studentspersonalinformation
+       WHERE student_id = $1`,
+      [studentId]
+    );
+    if (studentRes.rowCount === 0) {
+      return res.status(404).send("<h3>❌ Student not found</h3>");
     }
+    const student = studentRes.rows[0];
 
+    // 3. Get submission if exists
+    const submissionRes = await pool.query(
+      `SELECT file_url, remark
+       FROM student_task_submissions_uploads
+       WHERE student_id = $1 AND task_id = $2`,
+      [studentId, task.task_id]
+    );
+    const submission = submissionRes.rows[0] || null;
+
+    // 4. Render HTML
     res.send(`
       <div style="font-family: Arial; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
         <h2>📚 Assignment Details</h2>
@@ -450,15 +458,31 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
         <p><strong>Batch:</strong> ${task.batch}</p>
         <p><strong>Due Date:</strong> ${new Date(task.due_date).toLocaleDateString()}</p>
         <p><strong>Assigned At:</strong> ${new Date(task.assigned_at).toLocaleString()}</p>
-        ${uploadResult ? `<p><strong>Your Uploaded File:</strong> <a href="${uploadResult.file_url}" target="_blank">View</a></p>` : ''}
-        ${uploadResult ? `<p><strong>Submitted At:</strong> ${new Date(uploadResult.submitted_at).toLocaleString()}</p>` : ''}
+
+        <h3>👤 Student Info</h3>
+        <p><strong>Name:</strong> ${student.name} ${student.last_name}</p>
+        <p><strong>Email:</strong> ${student.email}</p>
+
+        ${submission ? `
+          <h3>📎 Your Submission</h3>
+          <p><strong>File:</strong> <a href="${submission.file_url}" target="_blank">View File</a></p>
+          <p><strong>Remark:</strong> ${submission.remark || "No remark yet"}</p>
+        ` : `<p><em>You have not uploaded this assignment yet.</em></p>`}
+
+        ${submission && submission.remark ? `
+          <form action="/Students-Tasks/mark-as-done/${task.task_id}/${studentId}" method="POST">
+            <button type="submit">✅ Mark as Done</button>
+          </form>
+        ` : ''}
       </div>
     `);
+
   } catch (error) {
-    console.error("Error in viewAssignmentPageByToken:", error);
+    console.error("Error viewing assignment page:", error);
     next(error);
   }
 };
+
 
 
 // This Function is for Submitting Assignment
