@@ -113,9 +113,6 @@ export default function StudentAddForm() {
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-
-
-
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
@@ -205,9 +202,11 @@ export default function StudentAddForm() {
     if (!formData.join_date) newErrors.join_date = "Join date is required";
     if (!formData.end_date) newErrors.end_date = "End date is required";
 
-    if (!["IOT", "CCTV"].includes(formData.course_enrolled)) {
-      newErrors.course_enrolled = "Course must be IOT or CCTV";
-    }
+    // if (!["IOT", "CCTV"].includes(formData.course_enrolled)) {
+    //   newErrors.course_enrolled = "Course must be IOT or CCTV";
+    // }
+
+    if (!formData.course_enrolled) newErrors.course_enrolled = "Batch is required";
 
     if (!formData.batch) newErrors.batch = "Batch is required";
     if (!formData.tutor) newErrors.tutor = "Tutor is required";
@@ -228,6 +227,26 @@ export default function StudentAddForm() {
     return true;
   };
 
+
+  const [courses, setCourses] = useState<{ id: number; course_name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch("https://nystai-backend.onrender.com/Allcourses/get-all-courses");
+        const result = await response.json();
+        if (result.success) {
+          setCourses(result.data); // set courses into state
+        } else {
+          console.error("Failed to fetch courses");
+        }
+      } catch (err) {
+        console.error("Error fetching courses:", err);
+      }
+    };
+
+    fetchCourses();
+  }, []);
 
 
   return (
@@ -761,7 +780,7 @@ export default function StudentAddForm() {
                 <Label>Course Enrolled</Label>
                 <div className="relative">
                   <CustomDropdown
-                    options={["IOT", "CCTV"]}
+                    options={courses.map(course => course.course_name)} // dynamically mapped
                     value={formData.course_enrolled}
                     onSelect={(value) =>
                       setFormData({ ...formData, course_enrolled: value })
@@ -772,6 +791,7 @@ export default function StudentAddForm() {
                   )}
                 </div>
               </div>
+
 
 
               <div className="space-y-2">
