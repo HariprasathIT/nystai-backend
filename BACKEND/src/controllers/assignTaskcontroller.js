@@ -417,11 +417,7 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
   try {
     const { token } = req.params;
 
-    const result = await pool.query(
-      "SELECT * FROM student_batch_tasks WHERE access_token = $1",
-      [token]
-    );
-
+    const result = await pool.query("SELECT * FROM assignments WHERE token = $1", [token]);
 
     if (result.rows.length === 0) {
       return res.status(404).send("<h3>❌ Assignment not found</h3>");
@@ -518,7 +514,9 @@ export const addRemarkToSubmission = async (req, res, next) => {
       });
     }
 
-    // 2. Get student + task details
+    const updatedSubmission = result.rows[0];
+
+    // 2. Get student email + task details ( added task_description)
     const studentRes = await pool.query(
       `SELECT spi.email,
               spi.name,
@@ -546,21 +544,8 @@ export const addRemarkToSubmission = async (req, res, next) => {
         year: "numeric",
       });
 
-      // 🔑 3. Fetch the correct access_token for this task
-      const tokenRes = await pool.query(
-        `SELECT access_token 
-         FROM student_batch_tasks 
-         WHERE task_id = $1`,
-        [taskId]
-      );
 
-      if (tokenRes.rowCount === 0) {
-        return res.status(400).json({ success: false, message: "No token found for this task" });
-      }
-
-      const accessToken = tokenRes.rows[0].access_token;
-
-      // 4. Send remark email with proper Mark as Done link
+      // 3. Send remark email
       await sendBulkEmails(
         email,
         `📝 Remark for your Task: ${task_title}`,
@@ -571,8 +556,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
           due_date: formattedDueDate,
           task_description,
           remark,
-          // ✅ Correct link: uses token + studentId
-          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${studentId}`,
+          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${taskId}`,
         },
         true // <-- show Mark as Done button
       );
@@ -580,7 +564,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: "Remark sent successfully",
+      message: "Remark Sended Successfully",
       remark: result.rows[0].remark
     });
 
@@ -589,7 +573,6 @@ export const addRemarkToSubmission = async (req, res, next) => {
     next(error);
   }
 };
-
 
 
 export const verifyTaskToken = async (req, res, next) => {
