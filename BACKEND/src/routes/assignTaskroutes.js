@@ -16,6 +16,7 @@ import {
     viewAssignmentPageByToken,
 } from '../controllers/assignTaskcontroller.js';
 import { AssignTaskInputValidator, handleAssignTaskValidation } from "../middleware/taskvalidator.js";
+import { NystaiTaskuploadImage } from "../middleware/tasksubmitimagemiddlware.js";
 
 const upload = multer();
 const router = express.Router();
@@ -32,7 +33,7 @@ router.delete("/delete-tasks/:task_id", deleteAssignedTask);
 router.get('/assignment/:token', viewAssignmentPageByToken);
 
 // Task submissions Single student 
-router.post("/assignment/submit/:token/:student_id", upload.single("file"), submitAssignmentByToken);
+router.post("/assignment/submit/:token/:student_id", NystaiTaskuploadImage.single("file"), submitAssignmentByToken);
 
 
 // Emails sent list
