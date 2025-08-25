@@ -556,7 +556,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
           due_date: formattedDueDate,
           task_description,
           remark,
-          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${taskId}`,
+          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${accessToken}`,
         },
         true // <-- show Mark as Done button
       );
