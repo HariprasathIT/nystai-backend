@@ -426,7 +426,7 @@ export const updateStudentWithProof = async (req, res) => {
             const studentRegisterNumber = regResult.rows[0].studentregisternumber;
 
             // 2️⃣ Generate certificateId
-            const certificateId = await generateCertificateId(client);
+            const certificateId = await generateCertificateId();
 
             // 3️⃣ Generate QR
             const qrUrl = await generateAndUploadQR(studentRegisterNumber, student_id, certificateId);
