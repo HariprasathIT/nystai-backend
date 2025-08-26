@@ -12,9 +12,9 @@ export const generateCertificateId = async (pool) => {
     [`CERT${currentYear}NYST%`]
   );
 
-  let nextNumber = 1;
+  let nextNumber = 1; 
 
-  if (result.rows.length > 0) {
+  if (result.rows.length > 0) {``
     const lastId = result.rows[0].certificate_id; // e.g. CERT2025NYST007
     const match = lastId.match(/(\d{3})$/); // extract last 3 digits
     if (match) {
