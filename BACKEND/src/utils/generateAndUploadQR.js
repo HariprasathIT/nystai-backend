@@ -3,26 +3,37 @@ import { put } from "@vercel/blob";
 
 const generateAndUploadQR = async (studentRegisterNumber, studentId, certificateId) => {
   try {
-    console.log("Starting QR generation for student:", studentId);
-    console.log("Register Number for QR:", studentRegisterNumber);
+    if (!certificateId) {
+      throw new Error(" certificateId is missing. Cannot generate QR.");
+    }
 
-    // ✅ Create a verification link instead of JSON
+    if (!process.env.FRONTEND_URL) {
+      throw new Error(" FRONTEND_URL is not defined in your .env file.");
+    }
+
+    console.log(" Starting QR generation");
+    console.log(" Student ID:", studentId);
+    console.log(" Register Number:", studentRegisterNumber);
+    console.log(" Certificate ID:", certificateId);
+
+    //  Create a verification link (frontend page)
     const verificationUrl = `${process.env.FRONTEND_URL}/verify?certificateId=${certificateId}`;
+    console.log("🔗 Verification URL:", verificationUrl);
 
-    // Generate QR image with the link
+    //  Generate QR as PNG buffer
     const qrBuffer = await QRCode.toBuffer(verificationUrl, { type: "png" });
 
-    // Upload to Vercel Blob
+    //  Upload to Vercel Blob
     const blob = await put(`studentqrs/${studentId}-${certificateId}.png`, qrBuffer, {
       access: "public",
       token: process.env.VERCEL_BLOB_RW_TOKEN,
-      allowOverwrite: true, // ✅ overwrite if re-generated
+      allowOverwrite: true,
     });
 
-    console.log("QR uploaded to:", blob.url);
+    console.log(" QR uploaded successfully:", blob.url);
     return blob.url;
   } catch (err) {
-    console.error("QR generation failed:", err.message);
+    console.error(" QR generation failed:", err.message);
     throw new Error(`QR code generation failed: ${err.message}`);
   }
 };
