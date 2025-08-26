@@ -476,9 +476,12 @@ export const submitAssignmentByToken = async (req, res, next) => {
 
     await db.query(
       `INSERT INTO student_task_submissions_uploads (student_id, task_id, file_url, submitted_at) 
-       VALUES ($1, $2, $3, NOW())`,
+   VALUES ($1, $2, $3, NOW())
+   ON CONFLICT (student_id, task_id) 
+   DO UPDATE SET file_url = EXCLUDED.file_url, submitted_at = NOW()`,
       [student_id, task_id, fileUrl]
     );
+
 
     res.status(201).json({
       success: true,
