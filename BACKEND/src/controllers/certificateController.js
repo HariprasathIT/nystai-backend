@@ -66,10 +66,9 @@ export const verifyCertificate = async (req, res) => {
 };
 
 // Upload certificate for a student
-
 export const uploadCertificateForStudent = async (req, res) => {
   try {
-    const { studentId } = req.params; // ✅ get from route
+    const { studentId } = req.params;
     const file = req.file;
 
     if (!studentId) {
@@ -79,20 +78,23 @@ export const uploadCertificateForStudent = async (req, res) => {
       return res.status(400).json({ success: false, error: "Certificate file is required" });
     }
 
-    // Check if student exists
-    const studentCheck = await pool.query(
-      `SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1`,
+    // ✅ Check if student already has a certificateId
+    const existing = await pool.query(
+      `SELECT certificate_id 
+       FROM studentsuniqueqrcode 
+       WHERE student_id = $1`,
       [studentId]
     );
 
-    if (studentCheck.rows.length === 0) {
-      return res.status(404).json({ success: false, error: "Student not found" });
+    let certificateId;
+
+    if (existing.rows.length > 0 && existing.rows[0].certificate_id) {
+      // Reuse the existing certificateId
+      certificateId = existing.rows[0].certificate_id;
+    } else {
+      // Generate only if not already assigned
+      certificateId = await generateCertificateId();
     }
-
-    const { studentregisternumber } = studentCheck.rows[0];
-
-    // Generate certificate ID
-    const certificateId = await generateCertificateId();
 
     // Upload to Vercel Blob
     const blob = await put(`certificates/${file.originalname}`, file.buffer, {
@@ -103,12 +105,14 @@ export const uploadCertificateForStudent = async (req, res) => {
 
     const certificateUrl = blob.url;
 
-    // UPSERT into studentsuniqueqrcode
+    // ✅ Update row, do not override certificateId if already set
     await pool.query(
       `INSERT INTO studentsuniqueqrcode (student_id, certificate_id, certificate_url, certificate_status)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (student_id)
-       DO UPDATE SET certificate_id = $2, certificate_url = $3, certificate_status = $4`,
+       DO UPDATE SET 
+         certificate_url = EXCLUDED.certificate_url, 
+         certificate_status = EXCLUDED.certificate_status`,
       [studentId, certificateId, certificateUrl, "completed"]
     );
 
