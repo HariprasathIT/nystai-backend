@@ -413,32 +413,55 @@ export const updateStudentWithProof = async (req, res) => {
         // 🔹 Generate certificate + QR if status is completed
         if (certificate_status === "completed") {
 
-            // 1️⃣ Get student register number from DB
+            // 1️⃣ Get student register number & existing certificate
             const regResult = await client.query(
-                `SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1`,
+                `SELECT studentregisternumber, certificate_id 
+         FROM studentsuniqueqrcode 
+         LEFT JOIN studentcoursedetails scd ON scd.student_id = studentsuniqueqrcode.student_id
+         WHERE studentsuniqueqrcode.student_id = $1`,
                 [student_id]
             );
 
-            if (regResult.rows.length === 0 || !regResult.rows[0].studentregisternumber) {
-                throw new Error("Student register number not found");
+            let studentRegisterNumber;
+            let certificateId;
+
+            if (regResult.rows.length === 0) {
+                // Student has no certificate yet
+                const reg = await client.query(
+                    `SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1`,
+                    [student_id]
+                );
+                if (reg.rows.length === 0 || !reg.rows[0].studentregisternumber) {
+                    throw new Error("Student register number not found");
+                }
+                studentRegisterNumber = reg.rows[0].studentregisternumber;
+
+                // Generate new certificate ID
+                certificateId = await generateCertificateId(client);
+            } else {
+                // Student already has certificate
+                studentRegisterNumber = regResult.rows[0].studentregisternumber;
+                certificateId = regResult.rows[0].certificate_id;
+
+                if (!certificateId) {
+                    // No certificate ID yet, generate one
+                    certificateId = await generateCertificateId(client);
+                }
             }
 
-            const studentRegisterNumber = regResult.rows[0].studentregisternumber;
-
-            // 2️⃣ Generate certificateId
-            const certificateId = await generateCertificateId();
-
-            // 3️⃣ Generate QR
+            // 2️⃣ Generate QR
             const qrUrl = await generateAndUploadQR(studentRegisterNumber, student_id, certificateId);
 
-            // 4️⃣ Save in DB
+            // 3️⃣ Save/update in DB
             await client.query(
-                `UPDATE studentsuniqueqrcode 
-         SET certificate_status=$1, student_qr_url=$2, certificate_id=$3 
-         WHERE student_id=$4`,
-                ["completed", qrUrl, certificateId, student_id]
+                `INSERT INTO studentsuniqueqrcode (student_id, certificate_id, student_qr_url, certificate_status)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (student_id)
+         DO UPDATE SET certificate_status=$4, student_qr_url=$3, certificate_id=$2`,
+                [student_id, certificateId, qrUrl, "completed"]
             );
         }
+
 
 
         await client.query('COMMIT');
