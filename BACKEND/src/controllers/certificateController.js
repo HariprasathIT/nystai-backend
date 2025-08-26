@@ -92,7 +92,7 @@ export const uploadCertificateForStudent = async (req, res) => {
     const { studentregisternumber } = studentCheck.rows[0];
 
     // Generate certificate ID
-    const certificateId = generateCertificateId(studentregisternumber);
+    const certificateId = await generateCertificateId(client);
 
     // Upload to Vercel Blob
     const blob = await put(`certificates/${file.originalname}`, file.buffer, {
