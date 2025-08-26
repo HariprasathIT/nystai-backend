@@ -412,14 +412,17 @@ export const updateStudentWithProof = async (req, res) => {
 
         // 🔹 Generate certificate + QR if status is completed
         if (certificate_status === "completed") {
-            const certificateId = await generateCertificateId(client); // pass db client
+            // 1️⃣ Generate certificateId first
+            const certificateId = await generateCertificateId(client);
 
-            const qrUrl = await generateAndUploadQR(certificateId, student_id);
+            // 2️⃣ Generate QR with proper certificateId
+            const qrUrl = await generateAndUploadQR(studentRegisterNumber, studentId, certificateId);
 
+            // 3️⃣ Save in DB
             await client.query(
                 `UPDATE studentsuniqueqrcode 
-                 SET certificate_status=$1, student_qr_url=$2, certificate_id=$3 
-                 WHERE student_id=$4`,
+         SET certificate_status=$1, student_qr_url=$2, certificate_id=$3 
+         WHERE student_id=$4`,
                 ["completed", qrUrl, certificateId, student_id]
             );
         }
