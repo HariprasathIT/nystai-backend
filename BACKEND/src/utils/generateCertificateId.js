@@ -1,5 +1,7 @@
 // utils/certificate.js
-export const generateCertificateId = async (pool) => {
+import pool from "../config/db.js";
+
+export const generateCertificateId = async () => {
   const currentYear = new Date().getFullYear();
 
   // 🔹 Fetch the latest certificate_id for the current year
