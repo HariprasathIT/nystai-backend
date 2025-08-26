@@ -526,23 +526,24 @@ export const addRemarkToSubmission = async (req, res, next) => {
     // 2. Get student email + task details ( added task_description)
     const studentRes = await pool.query(
       `SELECT spi.email,
-              spi.name,
-              spi.last_name,
-              t.task_title,
-              t.task_description,  
-              t.due_date,
-              t.course
-       FROM studentspersonalinformation spi
-       JOIN student_task_submissions_uploads s 
-            ON s.student_id = spi.student_id
-       JOIN student_batch_tasks t 
-            ON t.task_id = s.task_id
-       WHERE s.task_id = $1 AND s.student_id = $2`,
+          spi.name,
+          spi.last_name,
+          t.task_title,
+          t.task_description,  
+          t.due_date,
+          t.course,
+          t.access_token
+   FROM studentspersonalinformation spi
+   JOIN student_task_submissions_uploads s 
+        ON s.student_id = spi.student_id
+   JOIN student_batch_tasks t 
+        ON t.task_id = s.task_id
+   WHERE s.task_id = $1 AND s.student_id = $2`,
       [taskId, studentId]
     );
 
     if (studentRes.rowCount > 0) {
-      const { email, name, last_name, task_title, task_description, course, due_date } =
+      const { email, name, last_name, task_title, task_description, course, due_date, access_token } =
         studentRes.rows[0];
 
       const formattedDueDate = new Date(due_date).toLocaleDateString("en-GB", {
@@ -563,7 +564,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
           due_date: formattedDueDate,
           task_description,
           remark,
-          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${studentId}`,
+          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${access_token}/${studentId}`
         },
         true // <-- show Mark as Done button
       );
