@@ -514,9 +514,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
       });
     }
 
-    const updatedSubmission = result.rows[0];
-
-    // 2. Get student email + task details ( added task_description)
+    // 2. Get student email + task details + access token
     const studentRes = await pool.query(
       `SELECT spi.email,
               spi.name,
@@ -524,7 +522,8 @@ export const addRemarkToSubmission = async (req, res, next) => {
               t.task_title,
               t.task_description,  
               t.due_date,
-              t.course
+              t.course,
+              t.access_token
        FROM studentspersonalinformation spi
        JOIN student_task_submissions_uploads s 
             ON s.student_id = spi.student_id
@@ -535,7 +534,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
     );
 
     if (studentRes.rowCount > 0) {
-      const { email, name, last_name, task_title, task_description, course, due_date } =
+      const { email, name, last_name, task_title, task_description, course, due_date, access_token } =
         studentRes.rows[0];
 
       const formattedDueDate = new Date(due_date).toLocaleDateString("en-GB", {
@@ -544,8 +543,9 @@ export const addRemarkToSubmission = async (req, res, next) => {
         year: "numeric",
       });
 
+      // 3. Send remark email with proper link (token + studentId)
+      const viewLink = `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${access_token}/${studentId}`;
 
-      // 3. Send remark email
       await sendBulkEmails(
         email,
         `📝 Remark for your Task: ${task_title}`,
@@ -556,15 +556,15 @@ export const addRemarkToSubmission = async (req, res, next) => {
           due_date: formattedDueDate,
           task_description,
           remark,
-          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${taskId}`,
+          viewLink,
         },
-        true // <-- show Mark as Done button
+        true // Show "Mark as Done" button
       );
     }
 
     res.json({
       success: true,
-      message: "Remark Sended Successfully",
+      message: "Remark sent successfully",
       remark: result.rows[0].remark
     });
 
@@ -573,6 +573,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 export const verifyTaskToken = async (req, res, next) => {
