@@ -419,7 +419,7 @@ export const updateStudentWithProof = async (req, res) => {
                 [student_id]
             );
 
-            if (regResult.rows.length === 0 || !regResult.rows[0].studentregisternumber) {
+            if (regResult.rows.length === 0) {
                 throw new Error("Student register number not found");
             }
 
