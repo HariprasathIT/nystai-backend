@@ -10,63 +10,40 @@ export const assignTaskToBatch = async (req, res, next) => {
   const { batch, course, task_title, task_description, due_date } = req.body;
 
   try {
-    // 1. Generate a secure token for this task
-    const accessToken = crypto.randomBytes(20).toString("hex");
+    // Generate a secure token
+    const accessToken = crypto.randomBytes(20).toString('hex');
 
-    // 2. Insert Task into DB with token
-    const taskResult = await pool.query(
-      `INSERT INTO student_batch_tasks 
-         (batch, course, task_title, task_description, due_date, access_token)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
+    // Insert Task into DB with token
+    const result = await pool.query(
+      `INSERT INTO student_batch_tasks (batch, course, task_title, task_description, due_date, access_token)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [batch, course, task_title, task_description, due_date, accessToken]
     );
 
-    const task = taskResult.rows[0];
+    const task = result.rows[0];
 
-    // 3. Get all students in the batch
-    const studentsResult = await pool.query(
-      `SELECT spi.student_id, spi.email
+    // Send emails using token link
+    const emailQuery = await pool.query(
+      `SELECT spi.email, spi.student_id
        FROM studentcoursedetails scd
        JOIN studentspersonalinformation spi ON spi.student_id = scd.student_id
        WHERE scd.batch = $1`,
       [batch]
     );
 
-    const students = studentsResult.rows;
+    const students = emailQuery.rows;
 
-    // 4. Insert placeholder submission rows for each student
-    const placeholderPromises = students.map(({ student_id }) =>
-      pool.query(
-        `INSERT INTO student_task_submissions_uploads (student_id, task_id) 
-         VALUES ($1, $2)
-         ON CONFLICT (student_id, task_id) DO NOTHING`,
-        [student_id, task.task_id]
-      )
-    );
-
-    await Promise.all(placeholderPromises);
-
-    // 5. Send emails to each student with their unique link
-    const emailPromises = students.map(async ({ email, student_id }) => {
+    const sendPromises = students.map(async ({ email, student_id }) => {
       try {
-        const viewLink = `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${student_id}`;
+        await sendBulkEmails(email, `📚 New Task Assigned: ${task_title}`, {
+          batch,
+          course,
+          task_title,
+          task_description,
+          due_date,
+          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${student_id}`
+        }, true);
 
-        await sendBulkEmails(
-          email,
-          `📚 New Task Assigned: ${task_title}`,
-          {
-            batch,
-            course,
-            task_title,
-            task_description,
-            due_date,
-            viewLink,
-          },
-          true // Show "Mark as Done" button
-        );
-
-        // Record email status as sent
         await pool.query(
           `INSERT INTO student_task_emails (task_id, student_id, email, email_status)
            VALUES ($1, $2, $3, 'sent')`,
@@ -75,7 +52,6 @@ export const assignTaskToBatch = async (req, res, next) => {
       } catch (err) {
         console.error(`Failed to send email to ${email}`, err);
 
-        // Record email status as failed
         await pool.query(
           `INSERT INTO student_task_emails (task_id, student_id, email, email_status)
            VALUES ($1, $2, $3, 'failed')`,
@@ -84,16 +60,15 @@ export const assignTaskToBatch = async (req, res, next) => {
       }
     });
 
-    await Promise.all(emailPromises);
+    await Promise.all(sendPromises);
 
-    // 6. Respond with task details
     res.status(200).json({
       success: true,
-      message: "Task assigned, placeholder submissions created, emails sent, and status recorded",
-      task,
+      message: "Task assigned, emails sent, and status recorded",
+      task
     });
   } catch (err) {
-    console.error("Error assigning task:", err);
+    console.error(err);
     next(err);
   }
 };
@@ -505,12 +480,9 @@ export const submitAssignmentByToken = async (req, res, next) => {
 
     await db.query(
       `INSERT INTO student_task_submissions_uploads (student_id, task_id, file_url, submitted_at) 
-   VALUES ($1, $2, $3, NOW())
-   ON CONFLICT (student_id, task_id) 
-   DO UPDATE SET file_url = EXCLUDED.file_url, submitted_at = NOW()`,
+       VALUES ($1, $2, $3, NOW())`,
       [student_id, task_id, fileUrl]
     );
-
 
     res.status(201).json({
       success: true,
@@ -551,24 +523,23 @@ export const addRemarkToSubmission = async (req, res, next) => {
     // 2. Get student email + task details ( added task_description)
     const studentRes = await pool.query(
       `SELECT spi.email,
-          spi.name,
-          spi.last_name,
-          t.task_title,
-          t.task_description,  
-          t.due_date,
-          t.course,
-          t.access_token
-   FROM studentspersonalinformation spi
-   JOIN student_task_submissions_uploads s 
-        ON s.student_id = spi.student_id
-   JOIN student_batch_tasks t 
-        ON t.task_id = s.task_id
-   WHERE s.task_id = $1 AND s.student_id = $2`,
+              spi.name,
+              spi.last_name,
+              t.task_title,
+              t.task_description,  
+              t.due_date,
+              t.course
+       FROM studentspersonalinformation spi
+       JOIN student_task_submissions_uploads s 
+            ON s.student_id = spi.student_id
+       JOIN student_batch_tasks t 
+            ON t.task_id = s.task_id
+       WHERE s.task_id = $1 AND s.student_id = $2`,
       [taskId, studentId]
     );
 
     if (studentRes.rowCount > 0) {
-      const { email, name, last_name, task_title, task_description, course, due_date, access_token } =
+      const { email, name, last_name, task_title, task_description, course, due_date } =
         studentRes.rows[0];
 
       const formattedDueDate = new Date(due_date).toLocaleDateString("en-GB", {
@@ -589,7 +560,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
           due_date: formattedDueDate,
           task_description,
           remark,
-          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${access_token}/${studentId}`
+          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${taskId}`,
         },
         true // <-- show Mark as Done button
       );
