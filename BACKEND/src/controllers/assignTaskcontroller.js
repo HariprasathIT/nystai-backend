@@ -417,7 +417,10 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
   try {
     const { token } = req.params;
 
-    const result = await pool.query("SELECT * FROM assignments WHERE token = $1", [token]);
+    const result = await pool.query(
+      "SELECT * FROM student_batch_tasks WHERE access_token = $1",
+      [token]
+    );
 
     if (result.rows.length === 0) {
       return res.status(404).send("<h3>❌ Assignment not found</h3>");
@@ -440,6 +443,7 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 // This Function is for Submitting Assignment
@@ -476,9 +480,12 @@ export const submitAssignmentByToken = async (req, res, next) => {
 
     await db.query(
       `INSERT INTO student_task_submissions_uploads (student_id, task_id, file_url, submitted_at) 
-       VALUES ($1, $2, $3, NOW())`,
+   VALUES ($1, $2, $3, NOW())
+   ON CONFLICT (student_id, task_id) 
+   DO UPDATE SET file_url = EXCLUDED.file_url, submitted_at = NOW()`,
       [student_id, task_id, fileUrl]
     );
+
 
     res.status(201).json({
       success: true,
@@ -556,7 +563,7 @@ export const addRemarkToSubmission = async (req, res, next) => {
           due_date: formattedDueDate,
           task_description,
           remark,
-          viewLink: `https://nystai-backend.onrender.com/Students-Tasks/assignment/${taskId}`,
+          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${studentId}`,
         },
         true // <-- show Mark as Done button
       );
