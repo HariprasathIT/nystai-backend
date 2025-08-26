@@ -413,32 +413,38 @@ export const updateStudentWithProof = async (req, res) => {
         // 🔹 Generate certificate + QR if status is completed
         if (certificate_status === "completed") {
 
-            // 1️⃣ Get student register number from DB
+            // 1️⃣ Get student register number
             const regResult = await client.query(
                 `SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1`,
                 [student_id]
             );
-
-            if (regResult.rows.length === 0 || !regResult.rows[0].studentregisternumber) {
-                throw new Error("Student register number not found");
-            }
+            if (!regResult.rows.length) throw new Error("Student register number not found");
 
             const studentRegisterNumber = regResult.rows[0].studentregisternumber;
 
-            // 2️⃣ Generate certificateId
-            const certificateId = await generateCertificateId(client);
+            // 2️⃣ Generate or reuse certificateId
+            let certificateId;
+            const existing = await client.query(
+                `SELECT certificate_id FROM studentsuniqueqrcode WHERE student_id = $1`,
+                [student_id]
+            );
+            certificateId = existing.rows.length && existing.rows[0].certificate_id
+                ? existing.rows[0].certificate_id
+                : await generateCertificateId(client);
 
             // 3️⃣ Generate QR
             const qrUrl = await generateAndUploadQR(studentRegisterNumber, student_id, certificateId);
 
             // 4️⃣ Save in DB
             await client.query(
-                `UPDATE studentsuniqueqrcode 
-         SET certificate_status=$1, student_qr_url=$2, certificate_id=$3 
-         WHERE student_id=$4`,
-                ["completed", qrUrl, certificateId, student_id]
+                `INSERT INTO studentsuniqueqrcode (student_id, certificate_id, student_qr_url, certificate_status)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (student_id)
+         DO UPDATE SET certificate_id = $2, student_qr_url = $3, certificate_status = $4`,
+                [student_id, certificateId, qrUrl, "completed"]
             );
         }
+
 
 
         await client.query('COMMIT');
