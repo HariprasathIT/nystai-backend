@@ -10,40 +10,63 @@ export const assignTaskToBatch = async (req, res, next) => {
   const { batch, course, task_title, task_description, due_date } = req.body;
 
   try {
-    // Generate a secure token
-    const accessToken = crypto.randomBytes(20).toString('hex');
+    // 1. Generate a secure token for this task
+    const accessToken = crypto.randomBytes(20).toString("hex");
 
-    // Insert Task into DB with token
-    const result = await pool.query(
-      `INSERT INTO student_batch_tasks (batch, course, task_title, task_description, due_date, access_token)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    // 2. Insert Task into DB with token
+    const taskResult = await pool.query(
+      `INSERT INTO student_batch_tasks 
+         (batch, course, task_title, task_description, due_date, access_token)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
       [batch, course, task_title, task_description, due_date, accessToken]
     );
 
-    const task = result.rows[0];
+    const task = taskResult.rows[0];
 
-    // Send emails using token link
-    const emailQuery = await pool.query(
-      `SELECT spi.email, spi.student_id
+    // 3. Get all students in the batch
+    const studentsResult = await pool.query(
+      `SELECT spi.student_id, spi.email
        FROM studentcoursedetails scd
        JOIN studentspersonalinformation spi ON spi.student_id = scd.student_id
        WHERE scd.batch = $1`,
       [batch]
     );
 
-    const students = emailQuery.rows;
+    const students = studentsResult.rows;
 
-    const sendPromises = students.map(async ({ email, student_id }) => {
+    // 4. Insert placeholder submission rows for each student
+    const placeholderPromises = students.map(({ student_id }) =>
+      pool.query(
+        `INSERT INTO student_task_submissions_uploads (student_id, task_id) 
+         VALUES ($1, $2)
+         ON CONFLICT (student_id, task_id) DO NOTHING`,
+        [student_id, task.task_id]
+      )
+    );
+
+    await Promise.all(placeholderPromises);
+
+    // 5. Send emails to each student with their unique link
+    const emailPromises = students.map(async ({ email, student_id }) => {
       try {
-        await sendBulkEmails(email, `📚 New Task Assigned: ${task_title}`, {
-          batch,
-          course,
-          task_title,
-          task_description,
-          due_date,
-          viewLink: `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${student_id}`
-        }, true);
+        const viewLink = `https://admin-nystai-dashboard.vercel.app/Students-Tasks/assignment/${accessToken}/${student_id}`;
 
+        await sendBulkEmails(
+          email,
+          `📚 New Task Assigned: ${task_title}`,
+          {
+            batch,
+            course,
+            task_title,
+            task_description,
+            due_date,
+            viewLink,
+          },
+          true // Show "Mark as Done" button
+        );
+
+        // Record email status as sent
         await pool.query(
           `INSERT INTO student_task_emails (task_id, student_id, email, email_status)
            VALUES ($1, $2, $3, 'sent')`,
@@ -52,6 +75,7 @@ export const assignTaskToBatch = async (req, res, next) => {
       } catch (err) {
         console.error(`Failed to send email to ${email}`, err);
 
+        // Record email status as failed
         await pool.query(
           `INSERT INTO student_task_emails (task_id, student_id, email, email_status)
            VALUES ($1, $2, $3, 'failed')`,
@@ -60,15 +84,16 @@ export const assignTaskToBatch = async (req, res, next) => {
       }
     });
 
-    await Promise.all(sendPromises);
+    await Promise.all(emailPromises);
 
+    // 6. Respond with task details
     res.status(200).json({
       success: true,
-      message: "Task assigned, emails sent, and status recorded",
-      task
+      message: "Task assigned, placeholder submissions created, emails sent, and status recorded",
+      task,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Error assigning task:", err);
     next(err);
   }
 };
