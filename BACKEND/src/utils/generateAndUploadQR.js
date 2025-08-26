@@ -3,43 +3,26 @@ import { put } from "@vercel/blob";
 
 const generateAndUploadQR = async (studentRegisterNumber, studentId, certificateId) => {
   try {
-    console.log("🚀 Starting QR generation");
-    console.log("Student ID:", studentId);
-    console.log("Certificate ID:", certificateId);
-    console.log("Register Number:", studentRegisterNumber);
+    console.log("Starting QR generation for student:", studentId);
+    console.log("Register Number for QR:", studentRegisterNumber);
 
-    if (!certificateId) {
-      throw new Error("❌ certificateId is missing!");
-    }
-    if (!process.env.FRONTEND_URL) {
-      throw new Error("❌ FRONTEND_URL is missing in .env");
-    }
-    if (!process.env.VERCEL_BLOB_RW_TOKEN) {
-      throw new Error("❌ VERCEL_BLOB_RW_TOKEN is missing in .env");
-    }
-
-    // ✅ Create verification link
+    // ✅ Create a verification link instead of JSON
     const verificationUrl = `${process.env.FRONTEND_URL}/verify?certificateId=${certificateId}`;
-    console.log("🔗 Verification URL:", verificationUrl);
 
-    // ✅ Generate QR image
+    // Generate QR image with the link
     const qrBuffer = await QRCode.toBuffer(verificationUrl, { type: "png" });
-    console.log("✅ QR Buffer generated, size:", qrBuffer.length);
 
-    // ✅ Upload to Vercel Blob
-    const fileName = `studentqrs/${studentId}-${certificateId}.png`;
-    console.log("📤 Uploading file:", fileName);
-
-    const blob = await put(fileName, qrBuffer, {
+    // Upload to Vercel Blob
+    const blob = await put(`studentqrs/${studentId}-${certificateId}.png`, qrBuffer, {
       access: "public",
       token: process.env.VERCEL_BLOB_RW_TOKEN,
-      allowOverwrite: true,
+      allowOverwrite: true, // ✅ overwrite if re-generated
     });
 
-    console.log("✅ QR uploaded successfully:", blob.url);
+    console.log("QR uploaded to:", blob.url);
     return blob.url;
   } catch (err) {
-    console.error("❌ QR generation failed:", err);
+    console.error("QR generation failed:", err.message);
     throw new Error(`QR code generation failed: ${err.message}`);
   }
 };
