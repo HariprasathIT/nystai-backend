@@ -417,10 +417,7 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
   try {
     const { token } = req.params;
 
-    const result = await pool.query(
-      "SELECT * FROM student_batch_tasks WHERE access_token = $1",
-      [token]
-    );
+    const result = await pool.query("SELECT * FROM assignments WHERE token = $1", [token]);
 
     if (result.rows.length === 0) {
       return res.status(404).send("<h3>❌ Assignment not found</h3>");
@@ -443,7 +440,6 @@ export const viewAssignmentPageByToken = async (req, res, next) => {
     next(error);
   }
 };
-
 
 
 // This Function is for Submitting Assignment
