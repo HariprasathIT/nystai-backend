@@ -18,9 +18,9 @@ export const verifyCertificate = async (req, res) => {
 
     // Require exactly 2 fields
     if (filledFields.length !== 2) {
-      return res.status(400).json({
-        success: false,
-        error: "Exactly 2 fields must be provided",
+      return res.status(400).json({ 
+        success: false, 
+        error: "Exactly 2 fields must be provided", 
         hint: "Enter any 2 of Aadhar, Email, PAN, or Phone"
       });
     }
@@ -69,7 +69,7 @@ export const verifyCertificate = async (req, res) => {
 
 export const uploadCertificateForStudent = async (req, res) => {
   try {
-    const { studentId } = req.params; 
+    const { studentId } = req.params; // ✅ get from route
     const file = req.file;
 
     if (!studentId) {
@@ -89,8 +89,10 @@ export const uploadCertificateForStudent = async (req, res) => {
       return res.status(404).json({ success: false, error: "Student not found" });
     }
 
-    // Generate certificate ID properly
-    const certificateId = await generateCertificateId(pool);
+    const { studentregisternumber } = studentCheck.rows[0];
+
+    // Generate certificate ID
+    const certificateId = generateCertificateId(studentregisternumber);
 
     // Upload to Vercel Blob
     const blob = await put(`certificates/${file.originalname}`, file.buffer, {
