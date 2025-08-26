@@ -412,26 +412,29 @@ export const updateStudentWithProof = async (req, res) => {
 
         // 🔹 Generate certificate + QR if status is completed
         if (certificate_status === "completed") {
-
-            // 1️⃣ Get student register number from DB
-            const regResult = await client.query(
-                `SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1`,
+            // 1️⃣ Fetch existing certificate ID
+            const certResult = await client.query(
+                "SELECT certificate_id FROM studentsuniqueqrcode WHERE student_id = $1",
                 [student_id]
             );
+            let certificateId = certResult.rows[0]?.certificate_id;
 
-            if (regResult.rows.length === 0) {
-                throw new Error("Student register number not found");
+            // 2️⃣ Generate new certificate ID if none exists
+            if (!certificateId) {
+                certificateId = await generateCertificateId(client);
             }
 
+            // 3️⃣ Fetch studentRegisterNumber from studentcoursedetails
+            const regResult = await client.query(
+                "SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1",
+                [student_id]
+            );
             const studentRegisterNumber = regResult.rows[0].studentregisternumber;
 
-            // 2️⃣ Generate certificateId
-            const certificateId = await generateCertificateId(client);
-
-            // 3️⃣ Generate QR
+            // 4️⃣ Generate QR
             const qrUrl = await generateAndUploadQR(studentRegisterNumber, student_id, certificateId);
 
-            // 4️⃣ Save in DB
+            // 5️⃣ Save in DB
             await client.query(
                 `UPDATE studentsuniqueqrcode 
          SET certificate_status=$1, student_qr_url=$2, certificate_id=$3 
@@ -439,6 +442,7 @@ export const updateStudentWithProof = async (req, res) => {
                 ["completed", qrUrl, certificateId, student_id]
             );
         }
+
 
 
         await client.query('COMMIT');
