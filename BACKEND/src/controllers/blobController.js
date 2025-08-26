@@ -410,59 +410,44 @@ export const updateStudentWithProof = async (req, res) => {
             );
         }
 
-        // 🔹 Generate certificate + QR if status is completed
-        if (certificate_status === "completed") {
+       // --- Certificate + QR ---
+    if (certificate_status === "completed") {
+      // 1️⃣ Check if student already has certificate
+      const certRes = await client.query(
+        `SELECT suq.certificate_id, scd.studentregisternumber
+         FROM studentsuniqueqrcode suq
+         LEFT JOIN studentcoursedetails scd ON scd.student_id = suq.student_id
+         WHERE suq.student_id=$1`,
+        [student_id]
+      );
 
-            // 1️⃣ Get student register number & existing certificate
-            const regResult = await client.query(
-                `SELECT studentregisternumber, certificate_id 
-         FROM studentsuniqueqrcode 
-         LEFT JOIN studentcoursedetails scd ON scd.student_id = studentsuniqueqrcode.student_id
-         WHERE studentsuniqueqrcode.student_id = $1`,
-                [student_id]
-            );
+      let studentRegisterNumber, certificateId;
+      if (certRes.rows.length === 0) {
+        // No previous certificate
+        const regRes = await client.query(
+          `SELECT studentregisternumber FROM studentcoursedetails WHERE student_id=$1`,
+          [student_id]
+        );
+        if (!regRes.rows[0]?.studentregisternumber) throw new Error("Register number not found");
+        studentRegisterNumber = regRes.rows[0].studentregisternumber;
+        certificateId = await generateCertificateId(client);
+      } else {
+        studentRegisterNumber = certRes.rows[0].studentregisternumber;
+        certificateId = certRes.rows[0].certificate_id || await generateCertificateId(client);
+      }
 
-            let studentRegisterNumber;
-            let certificateId;
+      // 2️⃣ Generate QR
+      const qrUrl = await generateAndUploadQR(studentRegisterNumber, student_id, certificateId);
 
-            if (regResult.rows.length === 0) {
-                // Student has no certificate yet
-                const reg = await client.query(
-                    `SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1`,
-                    [student_id]
-                );
-                if (reg.rows.length === 0 || !reg.rows[0].studentregisternumber) {
-                    throw new Error("Student register number not found");
-                }
-                studentRegisterNumber = reg.rows[0].studentregisternumber;
-
-                // Generate new certificate ID
-                certificateId = await generateCertificateId(client);
-            } else {
-                // Student already has certificate
-                studentRegisterNumber = regResult.rows[0].studentregisternumber;
-                certificateId = regResult.rows[0].certificate_id;
-
-                if (!certificateId) {
-                    // No certificate ID yet, generate one
-                    certificateId = await generateCertificateId(client);
-                }
-            }
-
-            // 2️⃣ Generate QR
-            const qrUrl = await generateAndUploadQR(studentRegisterNumber, student_id, certificateId);
-
-            // 3️⃣ Save/update in DB
-            await client.query(
-                `INSERT INTO studentsuniqueqrcode (student_id, certificate_id, student_qr_url, certificate_status)
-         VALUES ($1, $2, $3, $4)
+      // 3️⃣ Insert or update certificate
+      await client.query(
+        `INSERT INTO studentsuniqueqrcode (student_id, certificate_id, student_qr_url, certificate_status)
+         VALUES ($1,$2,$3,$4)
          ON CONFLICT (student_id)
-         DO UPDATE SET certificate_status=$4, student_qr_url=$3, certificate_id=$2`,
-                [student_id, certificateId, qrUrl, "completed"]
-            );
-        }
-
-
+         DO UPDATE SET certificate_id=$2, student_qr_url=$3, certificate_status=$4`,
+        [student_id, certificateId, qrUrl, "completed"]
+      );
+    }
 
         await client.query('COMMIT');
 
