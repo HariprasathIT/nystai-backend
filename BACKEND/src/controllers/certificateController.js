@@ -2,6 +2,7 @@
 import pool from "../config/db.js"; // PostgreSQL pool
 import { put } from "@vercel/blob";
 import { generateCertificateId } from "../utils/generateCertificateId.js";
+import generateAndUploadQR from "../utils/generateAndUploadQR.js";
 
 // Verify certificate with 2 random fields
 export const verifyCertificate = async (req, res) => {
@@ -69,47 +70,42 @@ export const verifyCertificate = async (req, res) => {
 
 export const uploadCertificateForStudent = async (req, res) => {
   try {
-    const { studentId } = req.params; // ✅ get from route
+    const { studentId } = req.params;
     const file = req.file;
 
-    if (!studentId) {
-      return res.status(400).json({ success: false, error: "studentId is required in route" });
-    }
-    if (!file) {
-      return res.status(400).json({ success: false, error: "Certificate file is required" });
-    }
+    if (!studentId) return res.status(400).json({ success: false, error: "studentId is required in route" });
+    if (!file) return res.status(400).json({ success: false, error: "Certificate file is required" });
 
-    // Check if student exists
+    // Check student
     const studentCheck = await pool.query(
       `SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1`,
       [studentId]
     );
-
-    if (studentCheck.rows.length === 0) {
-      return res.status(404).json({ success: false, error: "Student not found" });
-    }
+    if (studentCheck.rows.length === 0) return res.status(404).json({ success: false, error: "Student not found" });
 
     const { studentregisternumber } = studentCheck.rows[0];
 
-    // Generate certificate ID
+    // Generate certificateId
     const certificateId = generateCertificateId(studentregisternumber);
 
-    // Upload to Vercel Blob
+    // Upload certificate
     const blob = await put(`certificates/${file.originalname}`, file.buffer, {
       access: "public",
       token: process.env.VERCEL_BLOB_RW_TOKEN,
       addRandomSuffix: true,
     });
-
     const certificateUrl = blob.url;
+
+    // ✅ Generate QR with verification link
+    const qrUrl = await generateAndUploadQR(studentregisternumber, studentId, certificateId);
 
     // UPSERT into studentsuniqueqrcode
     await pool.query(
-      `INSERT INTO studentsuniqueqrcode (student_id, certificate_id, certificate_url, certificate_status)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO studentsuniqueqrcode (student_id, certificate_id, certificate_url, student_qr_url, certificate_status)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (student_id)
-       DO UPDATE SET certificate_id = $2, certificate_url = $3, certificate_status = $4`,
-      [studentId, certificateId, certificateUrl, "completed"]
+       DO UPDATE SET certificate_id = $2, certificate_url = $3, student_qr_url = $4, certificate_status = $5`,
+      [studentId, certificateId, certificateUrl, qrUrl, "completed"]
     );
 
     res.status(200).json({
@@ -117,6 +113,7 @@ export const uploadCertificateForStudent = async (req, res) => {
       message: `Certificate uploaded successfully for student ID ${studentId}`,
       certificateId,
       certificateUrl,
+      qrUrl,
     });
   } catch (err) {
     console.error("Error uploading certificate:", err);

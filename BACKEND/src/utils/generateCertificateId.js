@@ -1,13 +1,9 @@
 // utils/certificate.js
-
-import db from "../config/db.js";
-
-
-export const generateCertificateId = async () => {
+export const generateCertificateId = async (pool) => {
   const currentYear = new Date().getFullYear();
 
   // 🔹 Fetch the latest certificate_id for the current year
-  const result = await db.query(
+  const result = await pool.query(
     `SELECT certificate_id 
      FROM studentsuniqueqrcode 
      WHERE certificate_id LIKE $1
