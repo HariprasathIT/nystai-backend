@@ -1,7 +1,8 @@
 import express from 'express';
 import { uploadFields } from '../middleware/uploadMiddleware.js';
-import { deleteStudent, getAllStudents, getCompletedStudentsCount, getCourseStudentCount, getLastSixMonthsStudentCount, getStudentById, getStudentQR, getStudentsCount, getStudentsCountByCourse,  insertStudentWithProof, updateStudentWithProof } from '../controllers/blobController.js';
+import { deleteStudent, getAllStudents, getCompletedStudentsCount, getCourseStudentCount, getLastSixMonthsStudentCount, getStudentById, getStudentQR, getStudentsCount, getStudentsCountByCourse, insertStudentWithProof, updateStudentWithProof } from '../controllers/blobController.js';
 import { handleValidationstudentInsert, validateStudent } from '../middleware/validateStudent.js';
+import { validateUpdateStudentCourse } from '../middleware/updatestudentmiddleware.js';
 
 
 const router = express.Router();
@@ -18,7 +19,7 @@ router.post('/insert-student',
 router.get('/get-all-students', getAllStudents);
 
 //  Update student with file uploads
-router.put('/update-student/:student_id', uploadFields, updateStudentWithProof);
+router.put('/update-student/:student_id', uploadFields, validateUpdateStudentCourse, updateStudentWithProof);
 
 // Delete student route
 router.delete('/students/:id', deleteStudent);
