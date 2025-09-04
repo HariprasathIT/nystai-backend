@@ -1,4 +1,3 @@
-
 import Label from "../Label";
 import Input from "../input/InputField";
 import DatePicker from "../date-picker.tsx";
@@ -9,9 +8,9 @@ import { useDropzone } from "react-dropzone";
 import Upload from "../../../icons/Upload icon.png";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import toast from 'react-hot-toast';
+import toast from "react-hot-toast";
 
-
+// Types
 type StudentFormData = {
   name: string;
   last_name: string;
@@ -36,13 +35,10 @@ type StudentFormData = {
   course_enrolled: string;
   batch: string;
   tutor: string;
-  // certificate_status: string;
-  // Old files (Receiving)
   pan_card_url?: string;
   aadhar_card_url?: string;
   sslc_marksheet_url?: string;
   passport_photo_url?: string;
-  // New files (for upload)
   pan_card?: File | null;
   aadhar_card?: File | null;
   sslc_marksheet?: File | null;
@@ -50,8 +46,9 @@ type StudentFormData = {
 };
 
 
-export default function StudentEditForm() {
+type StudentFormErrors = Partial<Record<keyof StudentFormData, string>>;
 
+export default function StudentEditForm() {
   const [formData, setFormData] = useState<StudentFormData>({
     name: "",
     last_name: "",
@@ -83,6 +80,7 @@ export default function StudentEditForm() {
     passport_photo_url: ""
   });
 
+  const [errors, setErrors] = useState<StudentFormErrors>({});
   const { id } = useParams();
 
   useEffect(() => {
@@ -91,9 +89,9 @@ export default function StudentEditForm() {
         const res = await axios.get(
           `https://nystai-backend.onrender.com/single-student/${id}`
         );
-        const student = res.data.data; // ✅ Fix this line
-
+        const student = res.data.data;
         setFormData({
+          ...formData,
           name: student.name ?? "",
           last_name: student.last_name ?? "",
           dob: student.dob ?? "",
@@ -117,58 +115,161 @@ export default function StudentEditForm() {
           course_enrolled: student.course_enrolled ?? "",
           batch: student.batch ?? "",
           tutor: student.tutor ?? "",
-          // certificate_status: student.certificate_status ?? "",
           pan_card_url: student.pan_card_url ?? "",
           aadhar_card_url: student.aadhar_card_url ?? "",
           sslc_marksheet_url: student.sslc_marksheet_url ?? "",
-          passport_photo_url: student.passport_photo_url ?? ""
+          passport_photo_url: student.passport_photo_url ?? "",
         });
       } catch (error) {
-        console.error("Error fetching student data:", error);
+        console.error(error);
+        toast.error("Failed to fetch student data");
       }
     };
-
     fetchStudent();
   }, [id]);
 
-  console.log("FormData after fetch:", formData);
+  const validateForm = (): boolean => {
+    const newErrors: StudentFormErrors = {};
+
+    // Name validation
+    if (!formData.name.trim()) newErrors.name = "First name is required";
+    else if (formData.name.length < 4 || formData.name.length > 30)
+      newErrors.name = "Name must be between 4 and 30 characters";
+    else if (!/^[A-Za-z]+$/.test(formData.name))
+      newErrors.name = "Name must contain only letters";
+
+    // Last name
+    if (!formData.last_name.trim()) newErrors.last_name = "Last name is required";
+    else if (formData.last_name.length > 4)
+      newErrors.last_name = "Last name must be at most 4 characters long";
+    else if (!/^[A-Za-z]+$/.test(formData.last_name))
+      newErrors.last_name = "Last name must contain only letters";
+
+    // DOB
+    if (!formData.dob) newErrors.dob = "Date of birth is required";
+    else {
+      const dobDate = new Date(formData.dob);
+      const today = new Date();
+      let age = today.getFullYear() - dobDate.getFullYear();
+      const m = today.getMonth() - dobDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) age--;
+      if (age < 21) newErrors.dob = "Student must be at least 21 years old";
+    }
+
+    // Gender
+    if (!["Male", "Female", "Other"].includes(formData.gender))
+      newErrors.gender = "Invalid gender option";
+
+    // Email
+    if (!formData.email.trim()) newErrors.email = "Email is required";
+    else if (!/^\S+@\S+\.\S+$/.test(formData.email))
+      newErrors.email = "Invalid email";
+    else if (!/@(?:gmail\.com|yahoo\.com|outlook\.com|.+\.org)$/.test(formData.email))
+      newErrors.email = "Only gmail.com, yahoo.com, outlook.com, or .org emails are allowed";
+
+    // Phone
+    if (!formData.phone.trim()) newErrors.phone = "Phone is required";
+    else if (!/^[6-9]\d{9}$/.test(formData.phone))
+      newErrors.phone = "Phone must start with 6-9 and be 10 digits";
+
+    // Alt phone
+    if (formData.alt_phone && !/^[6-9]\d{9}$/.test(formData.alt_phone))
+      newErrors.alt_phone = "Alt phone must start with 6-9 and be 10 digits";
+
+    // Aadhar
+    if (!formData.aadhar_number.trim()) newErrors.aadhar_number = "Aadhar is required";
+    else if (!/^\d{12}$/.test(formData.aadhar_number))
+      newErrors.aadhar_number = "Aadhar must be 12 digits";
+
+    // PAN
+    if (!formData.pan_number.trim()) newErrors.pan_number = "PAN is required";
+    else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.pan_number))
+      newErrors.pan_number = "Invalid PAN format";
+
+    // Address
+    if (!formData.address.trim()) newErrors.address = "Address is required";
+
+    // Pincode
+    if (!formData.pincode.trim()) newErrors.pincode = "Pincode is required";
+    else if (!/^[1-9][0-9]{5}$/.test(formData.pincode))
+      newErrors.pincode = "Pincode must be 6 digits starting 1-9";
+
+    // State
+    if (!formData.state.trim()) newErrors.state = "State is required";
+
+    // Course details (required fields)
+    ["department", "course", "year_of_passed", "experience", "department_stream", "course_duration", "join_date", "end_date", "course_enrolled", "batch", "tutor"].forEach(field => {
+      if (!formData[field as keyof StudentFormData]?.toString().trim())
+        newErrors[field as keyof StudentFormData] = `${field.replace("_", " ")} is required`;
+    });
+
+    // File validation: required + 2MB limit
+    ["pan_card", "aadhar_card", "sslc_marksheet", "passport_photo"].forEach((key) => {
+      const file = formData[key as keyof StudentFormData] as File | null;
+      const url = formData[`${key}_url` as keyof StudentFormData] as string | undefined;
+      if (!file && !url) {
+        newErrors[key as keyof StudentFormData] = "File is required";
+      }
+      if (file && file.size > 2 * 1024 * 1024) {
+        newErrors[key as keyof StudentFormData] = "File must be less than 2MB";
+      }
+    });
+
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
 
   const handleSubmit = async () => {
-    try {
-      const payload = new FormData();
+    if (!validateForm()) return;
 
-      // Append text fields
-      Object.entries(formData).forEach(([key, value]) => {
-        if (
-          value !== undefined &&
-          value !== null &&
-          typeof value !== "object" // avoid appending [object Object]
-        ) {
-          payload.append(key, value as string);
+    const payload = new FormData();
+
+    // Append all fields including File objects
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (value instanceof File) {
+          payload.append(key, value); // File object
+        } else if (typeof value === "string") {
+          payload.append(key, value);
         }
+      }
+    });
+
+    try {
+      await axios.put(`https://nystai-backend.onrender.com/update-student/${id}`, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      // Append files with exact field names
-      if (formData.pan_card instanceof File)
-        payload.append("pan_card", formData.pan_card);
-      if (formData.aadhar_card instanceof File)
-        payload.append("aadhar_card", formData.aadhar_card);
-      if (formData.sslc_marksheet instanceof File)
-        payload.append("sslc_marksheet", formData.sslc_marksheet);
-      if (formData.passport_photo instanceof File)
-        payload.append("passport_photo", formData.passport_photo);
-
-      await axios.put(
-        `https://nystai-backend.onrender.com/update-student/${id}`,
-        payload,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-
-      toast.success("Student updated!");
+      toast.success("Student updated successfully!");
     } catch (error) {
+      console.error(error);
       toast.error("Failed to update student");
     }
   };
+
+  const [courses, setCourses] = useState<{ id: number; course_name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await fetch(
+          "https://nystai-backend.onrender.com/Allcourses/get-all-courses"
+        );
+        const result = await response.json();
+        if (result.success) {
+          setCourses(result.data); // set courses into state
+        } else {
+          console.error("Failed to fetch courses");
+        }
+      } catch (err) {
+        console.error("Error fetching courses:", err);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -197,10 +298,13 @@ export default function StudentEditForm() {
                     placeholder="John"
                     type="text"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const onlyLetters = value.replace(/[^A-Za-z]/g, ''); // removes special chars
+                      setFormData({ ...formData, name: onlyLetters });
+                    }}
                   />
+                  {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                 </div>
               </div>
             </div>
@@ -211,7 +315,13 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="Doe" type="text" className=""
                     value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} />
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const onlyLetters = value.replace(/[^A-Za-z]/g, ''); // allows only A-Z, a-z
+                      setFormData({ ...formData, last_name: onlyLetters });
+                    }}
+                  />
+                  {errors.last_name && <p className="text-red-500 text-sm">{errors.last_name}</p>}
                 </div>
               </div>
             </div>
@@ -238,7 +348,7 @@ export default function StudentEditForm() {
 
                       setFormData({
                         ...formData,
-                        dob: `${year}-${month}-${day}`, // ✅ Exact date, no UTC shift
+                        dob: `${year}-${month}-${day}`, // ✅ Local date, no timezone shift
                       });
                     } else {
                       setFormData({
@@ -248,6 +358,7 @@ export default function StudentEditForm() {
                     }
                   }}
                 />
+                {errors.dob && <p className="text-red-500 text-sm">{errors.dob}</p>}
               </div>
             </div>
 
@@ -262,6 +373,7 @@ export default function StudentEditForm() {
                     selected={formData.gender as "Male" | "Female" | "Other"}
                     onSelect={(value) => setFormData({ ...formData, gender: value })}
                   />
+                  {errors.gender && <p className="text-red-500 text-sm">{errors.gender}</p>}
                 </div>
               </div>
             </div>
@@ -275,6 +387,7 @@ export default function StudentEditForm() {
                   <Input placeholder="info@gmail.com" type="email" className=""
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                  {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
                 </div>
               </div>
             </div>
@@ -285,7 +398,14 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="9876543210" type="tel" className=""
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                    maxLength={10} // prevents typing more than 10
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, ""); // remove non-digits
+                      if (value.length <= 10) {
+                        setFormData({ ...formData, phone: value });
+                      }
+                    }} />
+                  {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
                 </div>
               </div>
             </div>
@@ -296,7 +416,13 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="9876543211" type="tel" className=""
                     value={formData.alt_phone}
-                    onChange={(e) => setFormData({ ...formData, alt_phone: e.target.value })} />
+                    maxLength={10} // restrict typing to 10 digits
+                    onChange={(e) => {
+                      // allow only numbers & max 10 digits
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setFormData({ ...formData, alt_phone: value });
+                    }} />
+                  {errors.alt_phone && <p className="text-red-500 text-sm">{errors.alt_phone}</p>}
                 </div>
               </div>
             </div>
@@ -307,7 +433,13 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="XXXX-XXXX-XXXX" type="text" className=""
                     value={formData.aadhar_number}
-                    onChange={(e) => setFormData({ ...formData, aadhar_number: e.target.value })} />
+                    maxLength={12} // restricts input to 12 chars
+                    onChange={(e) => {
+                      // Allow only numbers
+                      const value = e.target.value.replace(/\D/g, "");
+                      setFormData({ ...formData, aadhar_number: value });
+                    }} />
+                  {errors.aadhar_number && <p className="text-red-500 text-sm">{errors.aadhar_number}</p>}
                 </div>
               </div>
             </div>
@@ -320,7 +452,15 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="ABCDE1234F" type="text" className=""
                     value={formData.pan_number}
-                    onChange={(e) => setFormData({ ...formData, pan_number: e.target.value })} />
+                    maxLength={10} // PAN is exactly 10 chars
+                    onChange={(e) => {
+                      const value = e.target.value.toUpperCase(); // auto uppercase
+                      // allow only alphabets and numbers, no special chars
+                      if (/^[A-Z0-9]*$/.test(value)) {
+                        setFormData({ ...formData, pan_number: value });
+                      }
+                    }} />
+                  {errors.pan_number && <p className="text-red-500 text-sm">{errors.pan_number}</p>}
                 </div>
               </div>
             </div>
@@ -332,6 +472,7 @@ export default function StudentEditForm() {
                   <Input placeholder="123 Street, City" type="text" className=""
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
+                  {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
                 </div>
               </div>
             </div>
@@ -340,9 +481,21 @@ export default function StudentEditForm() {
               <div>
                 <Label>Pincode</Label>
                 <div className="relative">
-                  <Input placeholder="600001" type="text" className=""
+                  <Input
+                    placeholder="600001"
+                    type="text"
                     value={formData.pincode}
-                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })} />
+                    inputMode="numeric"
+                    pattern="\d{6}"
+                    maxLength={6}
+                    onChange={(e) => {
+                      const onlyNums = e.target.value.replace(/\D/g, ''); // Remove non-digits including spaces
+                      if (onlyNums.length <= 6) {
+                        setFormData({ ...formData, pincode: onlyNums });
+                      }
+                    }}
+                  />
+                  {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
                 </div>
               </div>
             </div>
@@ -353,7 +506,11 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="Tamil Nadu" type="text" className=""
                     value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
+                    onChange={(e) => {
+                      const onlyChars = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                      setFormData({ ...formData, state: onlyChars });
+                    }} />
+                  {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
                 </div>
               </div>
             </div>
@@ -367,7 +524,11 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="Department Name" type="text" className=""
                     value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })} />
+                    onChange={(e) => {
+                      const onlyLettersAndSpaces = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                      setFormData({ ...formData, department: onlyLettersAndSpaces });
+                    }} />
+                  {errors.department && <p className="text-red-500 text-sm">{errors.department}</p>}
                 </div>
               </div>
             </div>
@@ -380,6 +541,7 @@ export default function StudentEditForm() {
                   <Input placeholder="Course Name" type="text" className=""
                     value={formData.course}
                     onChange={(e) => setFormData({ ...formData, course: e.target.value })} />
+                  {errors.course && <p className="text-red-500 text-sm">{errors.course}</p>}
                 </div>
               </div>
             </div>
@@ -392,6 +554,7 @@ export default function StudentEditForm() {
                   <Input placeholder="e.g. 2022" type="text" className=""
                     value={formData.year_of_passed}
                     onChange={(e) => setFormData({ ...formData, year_of_passed: e.target.value })} />
+                  {errors.year_of_passed && <p className="text-red-500 text-sm">{errors.year_of_passed}</p>}
                 </div>
               </div>
             </div>
@@ -403,7 +566,11 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="e.g. 2 years" type="text" className=""
                     value={formData.experience}
-                    onChange={(e) => setFormData({ ...formData, experience: e.target.value })} />
+                    onChange={(e) => {
+                      const numbersOnly = e.target.value.replace(/[^0-9]/g, '');
+                      setFormData({ ...formData, year_of_passed: numbersOnly });
+                    }} />
+                  {errors.experience && <p className="text-red-500 text-sm">{errors.experience}</p>}
                 </div>
               </div>
             </div>
@@ -421,7 +588,13 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="John" type="text" className=""
                     value={formData.department_stream}
-                    onChange={(e) => setFormData({ ...formData, department_stream: e.target.value })} />
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (/^[A-Za-z]*$/.test(value)) {
+                        setFormData({ ...formData, department_stream: value });
+                      }
+                    }} />
+                  {errors.department_stream && <p className="text-red-500 text-sm">{errors.department_stream}</p>}
                 </div>
               </div>
             </div>
@@ -432,7 +605,11 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="Doe" type="text" className=""
                     value={formData.course_duration}
-                    onChange={(e) => setFormData({ ...formData, course_duration: e.target.value })} />
+                    onChange={(e) => {
+                      const numbersOnly = e.target.value.replace(/[^0-9]/g, '');
+                      setFormData({ ...formData, course_duration: numbersOnly });
+                    }} />
+                  {errors.course_duration && <p className="text-red-500 text-sm">{errors.course_duration}</p>}
                 </div>
               </div>
             </div>
@@ -452,25 +629,21 @@ export default function StudentEditForm() {
                       }
                       onChange={(date) => {
                         const selectedDate = Array.isArray(date) ? date[0] : date;
-
-                        if (selectedDate) {
+                        if (selectedDate instanceof Date && !isNaN(selectedDate.getTime())) {
+                          // Format date in local timezone (YYYY-MM-DD)
                           const year = selectedDate.getFullYear();
                           const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
                           const day = String(selectedDate.getDate()).padStart(2, "0");
+                          const formattedDate = `${year}-${month}-${day}`;
 
-                          setFormData({
-                            ...formData,
-                            join_date: `${year}-${month}-${day}`,
-                          });
-                        } else {
-                          setFormData({
-                            ...formData,
-                            join_date: "",
-                          });
+                          setFormData((prev) => ({
+                            ...prev,
+                            join_date: formattedDate,
+                          }));
                         }
                       }}
-
                     />
+                    {errors.join_date && <p className="text-red-500 text-sm">{errors.join_date}</p>}
                   </div>
                 </div>
               </div>
@@ -496,40 +669,43 @@ export default function StudentEditForm() {
                   // }}
                   onChange={(date) => {
                     const selectedDate = Array.isArray(date) ? date[0] : date;
-
-                    if (selectedDate) {
+                    if (selectedDate instanceof Date && !isNaN(selectedDate.getTime())) {
+                      // Format in local time (YYYY-MM-DD)
                       const year = selectedDate.getFullYear();
                       const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
                       const day = String(selectedDate.getDate()).padStart(2, "0");
+                      const formattedDate = `${year}-${month}-${day}`;
 
-                      setFormData({
-                        ...formData,
-                        end_date: `${year}-${month}-${day}`,
-                      });
-                    } else {
-                      setFormData({
-                        ...formData,
-                        end_date: "",
-                      });
+                      setFormData((prev) => ({
+                        ...prev,
+                        end_date: formattedDate,
+                      }));
                     }
                   }}
                 />
+                {errors.end_date && <p className="text-red-500 text-sm">{errors.end_date}</p>}
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
             {/* Course Enrolled */}
-            <div className="space-y-6">
-              <div>
-                <Label>Course Enrolled</Label>
-                <div className="relative">
-                  <Input placeholder="Course Name" type="text" className=""
-                    value={formData.course_enrolled}
-                    onChange={(e) => setFormData({ ...formData, course_enrolled: e.target.value })} />
-                </div>
+            <div className="space-y-2">
+              <Label>Course Enrolled</Label>
+              <div className="relative">
+                <CustomDropdown
+                  options={courses.map(course => course.course_name)} // dynamically mapped
+                  selected={formData.course_enrolled} // selected value
+                  onSelect={(value) =>
+                    setFormData({ ...formData, course_enrolled: value })
+                  }
+                />
+                {errors.course_enrolled && (
+                  <p className="text-red-500 text-sm">{errors.course_enrolled}</p>
+                )}
               </div>
             </div>
+
 
             {/* Batch */}
             <div className="space-y-6">
@@ -538,7 +714,13 @@ export default function StudentEditForm() {
                 <div className="relative">
                   <Input placeholder="e.g. 2022-2023" type="text" className=""
                     value={formData.batch}
-                    onChange={(e) => setFormData({ ...formData, batch: e.target.value })} />
+                    onChange={(e) => {
+                      const inputValue = e.target.value.toUpperCase();
+                      if (/^[A-Z]*$/.test(inputValue)) {
+                        setFormData({ ...formData, batch: inputValue });
+                      }
+                    }} />
+                  {errors.batch && <p className="text-red-500 text-sm">{errors.batch}</p>}
                 </div>
               </div>
             </div>
@@ -553,6 +735,7 @@ export default function StudentEditForm() {
                     selected={formData.tutor as "Mohamed Yusuf Deen" | "Sivaguru" | "Others"}
                     onSelect={(value) => setFormData({ ...formData, tutor: value })}
                   />
+                  {errors.tutor && <p className="text-red-500 text-sm">{errors.tutor}</p>}
                 </div>
               </div>
             </div>
@@ -588,6 +771,7 @@ export default function StudentEditForm() {
                   setFormData((prev) => ({ ...prev, pan_card: file }))
                 }
               />
+              {errors.pan_card && <p className="text-red-500 text-sm">{errors.pan_card}</p>}
             </div>
             <div className="space-y-6">
               <Label>Aadhar Card</Label>
@@ -597,6 +781,7 @@ export default function StudentEditForm() {
                   setFormData((prev) => ({ ...prev, aadhar_card: file }))
                 }
               />
+              {errors.aadhar_card && <p className="text-red-500 text-sm">{errors.aadhar_card}</p>}
             </div>
           </div>
 
@@ -609,6 +794,7 @@ export default function StudentEditForm() {
                   setFormData((prev) => ({ ...prev, sslc_marksheet: file }))
                 }
               />
+              {errors.sslc_marksheet && <p className="text-red-500 text-sm">{errors.sslc_marksheet}</p>}
             </div>
             <div className="space-y-6">
               <Label>Passport Size Photo</Label>
@@ -618,6 +804,7 @@ export default function StudentEditForm() {
                   setFormData((prev) => ({ ...prev, passport_photo: file }))
                 }
               />
+              {errors.passport_photo && <p className="text-red-500 text-sm">{errors.passport_photo}</p>}
             </div>
           </div>
 

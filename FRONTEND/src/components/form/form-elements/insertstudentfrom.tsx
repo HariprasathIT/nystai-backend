@@ -3,38 +3,111 @@ import Input from "../input/InputField.tsx";
 import DatePicker from "../date-picker.tsx";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import Upload from "../../../icons/Upload icon.png";
 import Uploadafter from "../../../icons/OIP.webp";
-import { toast } from 'react-hot-toast';
+import { toast } from "react-hot-toast";
+import { Trash2 } from "lucide-react";
 
+// ------------------ Helper Functions for Validation ------------------
+const validateEmail = (email: string) => {
+  if (!email) return "Email is required";
+  const regex = /^[^\s@]+@[^\s@]+\.(com|org)$/;
+  if (!regex.test(email)) return "Invalid email (must be .com or .org)";
+  return "";
+};
+
+const validatePhone = (phone: string) => {
+  if (!phone) return "Phone number is required";
+  if (!/^[6-9]\d{9}$/.test(phone)) return "Phone must be 10 digits, starting with 6-9";
+  return "";
+};
+
+const validateAltPhone = (alt_phone: string) => {
+  if (!alt_phone) return "Alternate phone is required";
+  if (!/^[6-9]\d{9}$/.test(alt_phone)) return "Alternate phone must be 10 digits, starting with 6-9";
+  return "";
+};
+
+const validateAadhar = (aadhar: string) => {
+  if (!aadhar) return "Aadhar is required";
+  if (!/^\d{12}$/.test(aadhar)) return "Aadhar must be exactly 12 digits";
+  return "";
+};
+
+const validatePAN = (pan: string) => {
+  if (!pan) return "PAN is required";
+  if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan)) return "Invalid PAN format (e.g. ABCDE1234F)";
+  return "";
+};
+
+const validateName = (name: string) => {
+  if (!name) return "Name is required";
+  if (name.length < 4 || name.length > 50) return "Name must be 4-50 characters";
+  if (!/^[A-Za-z]+$/.test(name)) return "Name must contain only letters";
+  return "";
+};
+
+const validateLastName = (last_name: string) => {
+  if (!last_name) return "Last name is required";
+  if (last_name.length > 4) return "Last name must be at most 4 characters";
+  if (!/^[A-Za-z\s]+$/.test(last_name)) return "Last name must contain only letters";
+  return "";
+};
+
+const validateDOB = (dob: string) => {
+  if (!dob) return "Date of birth is required";
+  const dobDate = new Date(dob);
+  if (isNaN(dobDate.getTime())) return "Invalid date";
+  const age = new Date().getFullYear() - dobDate.getFullYear();
+  if (age < 21) return "Student must be at least 21 years old";
+  return "";
+};
+
+const validateGender = (gender: string) => {
+  if (!gender) return "Gender is required";
+  if (!["Male", "Female", "Other"].includes(gender)) return "Invalid gender";
+  return "";
+};
+
+const validateRequired = (value: string, label: string) => {
+  if (!value) return `${label} is required`;
+  return "";
+};
+
+const validatePincode = (pin: string) => {
+  if (!pin) return "Pincode is required";
+  if (!/^[1-9][0-9]{5}$/.test(pin)) return "Pincode must be 6 digits, starting with 1-9";
+  return "";
+};
+
+// ------------------ Main Form Component ------------------
 export default function StudentAddForm() {
-
   const [formData, setFormData] = useState({
-    name: '',
-    last_name: '',
-    dob: '',
-    gender: '',
-    email: '',
-    phone: '',
-    alt_phone: '',
-    aadhar_number: '',
-    pan_number: '',
-    address: '',
-    pincode: '',
-    state: '',
-    department: '',
-    course: '',
-    year_of_passed: '',
-    experience: '',
-    department_stream: '',
-    course_duration: '',
-    join_date: '',
-    end_date: '',
-    course_enrolled: '',
-    batch: '',
-    tutor: ''
+    name: "",
+    last_name: "",
+    dob: "",
+    gender: "",
+    email: "",
+    phone: "",
+    alt_phone: "",
+    aadhar_number: "",
+    pan_number: "",
+    address: "",
+    pincode: "",
+    state: "",
+    department: "",
+    course: "",
+    year_of_passed: "",
+    experience: "",
+    department_stream: "",
+    course_duration: "",
+    join_date: "",
+    end_date: "",
+    course_enrolled: "",
+    batch: "",
+    tutor: "",
   });
 
   const [documents, setDocuments] = useState<{
@@ -49,186 +122,91 @@ export default function StudentAddForm() {
     sslc_marksheet: null,
   });
 
-  const handleSubmit = async () => {
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [courses, setCourses] = useState<{ id: number; course_name: string }[]>([]);
+
+  // ------------------ Validation Before Submit ------------------
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    newErrors.name = validateName(formData.name);
+    newErrors.last_name = validateLastName(formData.last_name);
+    newErrors.dob = validateDOB(formData.dob);
+    newErrors.gender = validateGender(formData.gender);
+    newErrors.email = validateEmail(formData.email);
+    newErrors.phone = validatePhone(formData.phone);
+    newErrors.alt_phone = validateAltPhone(formData.alt_phone);
+    newErrors.aadhar_number = validateAadhar(formData.aadhar_number);
+    newErrors.pan_number = validatePAN(formData.pan_number);
+    newErrors.address = validateRequired(formData.address, "Address");
+    newErrors.pincode = validatePincode(formData.pincode);
+    newErrors.state = validateRequired(formData.state, "State");
+    newErrors.department = validateRequired(formData.department, "Department");
+    newErrors.course = validateRequired(formData.course, "Course");
+    newErrors.year_of_passed = validateRequired(formData.year_of_passed, "Year of Passed");
+    newErrors.experience = validateRequired(formData.experience, "Experience");
+    newErrors.department_stream = validateRequired(formData.department_stream, "Department Stream");
+    newErrors.course_duration = validateRequired(formData.course_duration, "Course Duration");
+    newErrors.join_date = validateRequired(formData.join_date, "Join Date");
+    newErrors.end_date = validateRequired(formData.end_date, "End Date");
+    newErrors.course_enrolled = validateRequired(formData.course_enrolled, "Course Enrolled");
+    newErrors.batch = validateRequired(formData.batch, "Batch");
+    newErrors.tutor = validateRequired(formData.tutor, "Tutor");
+
+    // File validations
+    if (!documents.pan_card) newErrors.pan_card = "Pan Card is required";
+    if (!documents.aadhar_card) newErrors.aadhar_card = "Aadhar Card is required";
+    if (!documents.sslc_marksheet) newErrors.sslc_marksheet = "SSLC Marksheet is required";
+    if (!documents.passport_photo) newErrors.passport_photo = "Passport Photo is required";
+
+    // Remove empty errors
+    Object.keys(newErrors).forEach((key) => {
+      if (!newErrors[key]) delete newErrors[key];
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // ------------------ Form Submit ------------------
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
     const data = new FormData();
-
-    const isValid = validateForm();
-    if (!isValid) {
-      toast.error("Please correct the errors");
-      return;
-    }
-
-    // Append text fields
-    for (const key in formData) {
-      data.append(key, formData[key as keyof typeof formData]);
-    }
-
-    // Check required documents
-    if (
-      !documents.passport_photo ||
-      !documents.pan_card ||
-      !documents.aadhar_card ||
-      !documents.sslc_marksheet
-    ) {
-      toast.error("Please upload all required documents.");
-      return;
-    }
-
-    data.append("passport_photo", documents.passport_photo);
-    data.append("pan_card", documents.pan_card);
-    data.append("aadhar_card", documents.aadhar_card);
-    data.append("sslc_marksheet", documents.sslc_marksheet);
+    Object.entries(formData).forEach(([key, value]) => data.append(key, value));
+    if (documents.passport_photo) data.append("passport_photo", documents.passport_photo);
+    if (documents.pan_card) data.append("pan_card", documents.pan_card);
+    if (documents.aadhar_card) data.append("aadhar_card", documents.aadhar_card);
+    if (documents.sslc_marksheet) data.append("sslc_marksheet", documents.sslc_marksheet);
 
     try {
       const response = await fetch("https://nystai-backend.onrender.com/insert-student", {
         method: "POST",
         body: data,
       });
-
       const result = await response.json();
 
-
       if (!response.ok || result.success === false) {
-        if (result.errors) {
-          // Handle backend validation errors
-          const fieldErrors: { [key: string]: string } = {};
-          result.errors.forEach((error: { param: string; msg: string }) => {
-            fieldErrors[error.param] = error.msg;
-          });
-          setErrors(fieldErrors);
-          Object.values(fieldErrors).forEach(err => toast.error(err));
-          return;
-        }
-
-        throw new Error(result.error || "Upload failed");
+        toast.error("Submission failed");
+        return;
       }
 
-      toast.success("Student inserted! ID: " + result.student_id);
+      toast.success("Student inserted successfully! ID: " + result.student_id);
+      setFormData({
+        name: "", last_name: "", dob: "", gender: "", email: "", phone: "", alt_phone: "",
+        aadhar_number: "", pan_number: "", address: "", pincode: "", state: "", department: "",
+        course: "", year_of_passed: "", experience: "", department_stream: "", course_duration: "",
+        join_date: "", end_date: "", course_enrolled: "", batch: "", tutor: "",
+      });
+      setDocuments({ passport_photo: null, pan_card: null, aadhar_card: null, sslc_marksheet: null });
+      setErrors({});
     } catch (err) {
       console.error(err);
-      toast.error("Error uploading student");
+      toast.error("Network error. Please try again.");
     }
   };
 
-
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = "First name is required";
-    } else if (!/^[A-Za-z]{4,30}$/.test(formData.name)) {
-      newErrors.name = "Name must be 4–30 letters only";
-    }
-
-    if (!formData.last_name) {
-      newErrors.last_name = "Last name is required";
-    } else if (formData.last_name.length > 4) {
-      newErrors.last_name = "Last name must be at most 4 characters long";
-    } else if (!/^[A-Za-z\s]+$/.test(formData.last_name)) {
-      newErrors.last_name = "Last name must contain only letters";
-    }
-
-    if (!formData.dob) {
-      newErrors.dob = "Date of birth is required";
-    } else {
-      const age = new Date().getFullYear() - new Date(formData.dob).getFullYear();
-      if (age < 21) {
-        newErrors.dob = "Student must be at least 21 years old";
-      }
-    }
-
-    if (!formData.gender) {
-      newErrors.gender = "Gender is required";
-    }
-
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (
-      !/^[\w-.]+@(gmail\.com|yahoo\.com|outlook\.com|[\w-]+\.org)$/.test(formData.email)
-    ) {
-      newErrors.email = "Invalid or unsupported email domain";
-    }
-
-    if (!formData.phone) {
-      newErrors.phone = "Phone number is required";
-    } else if (!/^[6-9]\d{9}$/.test(formData.phone)) {
-      newErrors.phone = "Invalid phone number";
-    }
-
-    if (!formData.alt_phone) {
-      newErrors.alt_phone = "Alternate phone is required";
-    } else if (!/^[6-9]\d{9}$/.test(formData.alt_phone)) {
-      newErrors.alt_phone = "Invalid alternate phone number";
-    }
-
-    if (!/^\d{12}$/.test(formData.aadhar_number || "")) {
-      newErrors.aadhar_number = "Aadhar must be 12 digits";
-    }
-
-    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(formData.pan_number)) {
-      newErrors.pan_number = "Invalid PAN number format";
-    }
-
-    if (!formData.address) newErrors.address = "Address is required";
-
-    if (!/^\d{6}$/.test(formData.pincode)) {
-      newErrors.pincode = "Enter a valid 6-digit pincode";
-    }
-
-    if (!formData.state) newErrors.state = "State is required";
-    if (!formData.department) newErrors.department = "Department is required";
-    if (!formData.course) newErrors.course = "Course is required";
-
-    if (!/^(19|20)\d{2}$/.test(formData.year_of_passed)) {
-      newErrors.year_of_passed = "Enter a valid year (e.g. 2022)";
-    }
-
-    if (!formData.experience) newErrors.experience = "Experience is required";
-
-    if (!formData.department_stream.trim()) {
-      newErrors.department_stream = "Department / Stream is required";
-    } else if (!/^[A-Za-z0-9 ]+$/.test(formData.department_stream)) {
-      newErrors.department_stream = "Only letters and numbers allowed. No special characters.";
-    }
-
-    if (!formData.course_duration.trim()) {
-      newErrors.course_duration = "Course Duration is required";
-    } else if (!/^\d+$/.test(formData.course_duration)) {
-      newErrors.course_duration = "Only numbers are allowed";
-    }
-
-    if (!formData.join_date) newErrors.join_date = "Join date is required";
-    if (!formData.end_date) newErrors.end_date = "End date is required";
-
-    // if (!["IOT", "CCTV"].includes(formData.course_enrolled)) {
-    //   newErrors.course_enrolled = "Course must be IOT or CCTV";
-    // }
-
-    if (!formData.course_enrolled) newErrors.course_enrolled = "Batch is required";
-
-    if (!formData.batch) newErrors.batch = "Batch is required";
-    if (!formData.tutor) newErrors.tutor = "Tutor is required";
-
-    if (!documents.passport_photo) newErrors.passport_photo = "Passport photo is required";
-    if (!documents.pan_card) newErrors.pan_card = "PAN card is required";
-    if (!documents.aadhar_card) newErrors.aadhar_card = "Aadhar card is required";
-    if (!documents.sslc_marksheet) newErrors.sslc_marksheet = "SSLC marksheet is required";
-
-    setErrors(newErrors);
-
-    // 🔥 Show all errors in toast
-    if (Object.keys(newErrors).length > 0) {
-      Object.values(newErrors).forEach((errMsg) => toast.error(errMsg));
-      return false;
-    }
-
-    return true;
-  };
-
-
-  const [courses, setCourses] = useState<{ id: number; course_name: string }[]>([]);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -276,7 +254,6 @@ export default function StudentAddForm() {
                     <Input
                       placeholder="John"
                       type="text"
-                      className={`${errors.name ? 'border border-red-500' : ''}`}
                       value={formData.name}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -284,9 +261,7 @@ export default function StudentAddForm() {
                         setFormData({ ...formData, name: onlyLetters });
                       }}
                     />
-                    {errors.name && (
-                      <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-                    )}
+                    {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                   </div>
                 </div>
               </div>
@@ -298,7 +273,6 @@ export default function StudentAddForm() {
                     <Input
                       placeholder="Doe"
                       type="text"
-                      className={`${errors.last_name ? 'border border-red-500' : ''}`}
                       value={formData.last_name}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -306,9 +280,7 @@ export default function StudentAddForm() {
                         setFormData({ ...formData, last_name: onlyLetters });
                       }}
                     />
-                    {errors.last_name && (
-                      <p className="text-red-500 text-sm mt-1">{errors.last_name}</p>
-                    )}
+                    {errors.last_name && <p className="text-red-500 text-sm">{errors.last_name}</p>}
                   </div>
                 </div>
               </div>
@@ -342,9 +314,7 @@ export default function StudentAddForm() {
                       }
                     }}
                   />
-                  {errors.dob && (
-                    <p className="text-red-500 text-sm mt-1">{errors.dob}</p>
-                  )}
+                  {errors.dob && <p className="text-red-500 text-sm">{errors.dob}</p>}
                 </div>
               </div>
 
@@ -361,9 +331,7 @@ export default function StudentAddForm() {
                       value={formData.gender} //  controlled value
                       onSelect={(value) => setFormData({ ...formData, gender: value })}
                     />
-                    {errors.gender && (
-                      <p className="text-red-500 text-sm mt-1">{errors.gender}</p>
-                    )}
+                    {errors.gender && <p className="text-red-500 text-sm">{errors.gender}</p>}
                   </div>
                 </div>
               </div>
@@ -377,15 +345,12 @@ export default function StudentAddForm() {
                     <Input
                       placeholder="info@gmail.com"
                       type="email"
-                      className={`${errors.email ? 'border border-red-500' : ''}`}
                       value={formData.email}
                       onChange={(e) =>
                         setFormData({ ...formData, email: e.target.value })
                       }
                     />
-                    {errors.email && (
-                      <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-                    )}
+                    {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
                   </div>
                 </div>
               </div>
@@ -399,7 +364,6 @@ export default function StudentAddForm() {
                       placeholder="9876543210"
                       type="tel"
                       maxLength={10} // prevents typing more than 10
-                      className={`${errors.phone ? 'border border-red-500' : ''}`}
                       value={formData.phone}
                       onChange={(e) => {
                         const value = e.target.value.replace(/\D/g, ""); // remove non-digits
@@ -408,9 +372,7 @@ export default function StudentAddForm() {
                         }
                       }}
                     />
-                    {errors.phone && (
-                      <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-                    )}
+                    {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
                   </div>
                 </div>
               </div>
@@ -430,11 +392,8 @@ export default function StudentAddForm() {
                         const value = e.target.value.replace(/\D/g, "").slice(0, 10);
                         setFormData({ ...formData, alt_phone: value });
                       }}
-                      className={`${errors.alt_phone ? 'border border-red-500' : ''}`}
                     />
-                    {errors.alt_phone && (
-                      <p className="text-red-500 text-sm mt-1">{errors.alt_phone}</p>
-                    )}
+                    {errors.alt_phone && <p className="text-red-500 text-sm">{errors.alt_phone}</p>}
                   </div>
                 </div>
               </div>
@@ -454,12 +413,8 @@ export default function StudentAddForm() {
                         const value = e.target.value.replace(/\D/g, "");
                         setFormData({ ...formData, aadhar_number: value });
                       }}
-                      className={`${errors.aadhar_number ? 'border border-red-500' : ''}`}
                     />
-                    {errors.aadhar_number && (
-                      <p className="text-red-500 text-sm mt-1">{errors.aadhar_number}</p>
-                    )}
-
+                    {errors.aadhar_number && <p className="text-red-500 text-sm">{errors.aadhar_number}</p>}
                   </div>
                 </div>
               </div>
@@ -474,7 +429,6 @@ export default function StudentAddForm() {
                       placeholder="ABCDE1234F"
                       type="text"
                       maxLength={10} // PAN is exactly 10 chars
-                      className={`${errors.pan_number ? 'border border-red-500' : ''}`}
                       value={formData.pan_number}
                       onChange={(e) => {
                         const value = e.target.value.toUpperCase(); // auto uppercase
@@ -484,9 +438,7 @@ export default function StudentAddForm() {
                         }
                       }}
                     />
-                    {errors.pan_number && (
-                      <p className="text-red-500 text-sm mt-1">{errors.pan_number}</p>
-                    )}
+                    {errors.pan_number && <p className="text-red-500 text-sm">{errors.pan_number}</p>}
                   </div>
                 </div>
               </div>
@@ -496,11 +448,11 @@ export default function StudentAddForm() {
                 <div>
                   <Label>Address</Label>
                   <div className="relative">
-                    <Input placeholder="123 Street, City" type="text" className={`${errors.address ? 'border border-red-500' : ''}`} value={formData.address}
+                    <Input placeholder="123 Street, City"
+                      type="text"
+                      value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
-                    {errors.address && (
-                      <p className="text-red-500 text-sm mt-1">{errors.address}</p>
-                    )}
+                    {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
                   </div>
                 </div>
               </div>
@@ -515,7 +467,6 @@ export default function StudentAddForm() {
                       inputMode="numeric"
                       pattern="\d{6}"
                       maxLength={6}
-                      className={`${errors.pincode ? 'border border-red-500' : ''}`}
                       value={formData.pincode}
                       onChange={(e) => {
                         const onlyNums = e.target.value.replace(/\D/g, ''); // Remove non-digits including spaces
@@ -524,11 +475,8 @@ export default function StudentAddForm() {
                         }
                       }}
                     />
+                    {errors.pincode && <p className="text-red-500 text-sm">{errors.pincode}</p>}
                   </div>
-
-                  {errors.pincode && (
-                    <p className="text-red-500 text-sm mt-1">{errors.pincode}</p>
-                  )}
                 </div>
               </div>
 
@@ -541,17 +489,14 @@ export default function StudentAddForm() {
                     <Input
                       placeholder="Tamil Nadu"
                       type="text"
-                      className={`${errors.state ? 'border border-red-500' : ''}`}
                       value={formData.state}
                       onChange={(e) => {
                         const onlyChars = e.target.value.replace(/[^a-zA-Z\s]/g, '');
                         setFormData({ ...formData, state: onlyChars });
                       }}
                     />
+                    {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
                   </div>
-                  {errors.state && (
-                    <p className="text-red-500 text-sm mt-1">{errors.state}</p>
-                  )}
                 </div>
               </div>
 
@@ -567,17 +512,14 @@ export default function StudentAddForm() {
                     <Input
                       placeholder="Department Name"
                       type="text"
-                      className={`${errors.department ? 'border border-red-500' : ''}`}
                       value={formData.department}
                       onChange={(e) => {
                         const onlyLettersAndSpaces = e.target.value.replace(/[^a-zA-Z\s]/g, '');
                         setFormData({ ...formData, department: onlyLettersAndSpaces });
                       }}
                     />
+                    {errors.department && <p className="text-red-500 text-sm">{errors.department}</p>}
                   </div>
-                  {errors.department && (
-                    <p className="text-red-500 text-sm mt-1">{errors.department}</p>
-                  )}
                 </div>
               </div>
 
@@ -589,18 +531,13 @@ export default function StudentAddForm() {
                     <Input
                       placeholder="Course Name"
                       type="text"
-                      className={`${errors.course ? 'border border-red-500' : ''}`}
                       value={formData.course}
                       onChange={(e) =>
                         setFormData({ ...formData, course: e.target.value })
                       }
                     />
+                    {errors.course && <p className="text-red-500 text-sm">{errors.course}</p>}
                   </div>
-
-                  {/* Error message */}
-                  {errors.course && (
-                    <p className="text-red-500 text-sm mt-1">{errors.course}</p>
-                  )}
                 </div>
               </div>
 
@@ -612,19 +549,14 @@ export default function StudentAddForm() {
                     <Input
                       placeholder="e.g. 2022"
                       type="text"
-                      className={`${errors.year_of_passed ? 'border border-red-500' : ''}`}
                       value={formData.year_of_passed}
                       onChange={(e) => {
                         const numbersOnly = e.target.value.replace(/[^0-9]/g, '');
                         setFormData({ ...formData, year_of_passed: numbersOnly });
                       }}
                     />
+                    {errors.year_of_passed && <p className="text-red-500 text-sm">{errors.year_of_passed}</p>}
                   </div>
-
-                  {/* Error message */}
-                  {errors.year_of_passed && (
-                    <p className="text-red-500 text-sm mt-1">{errors.year_of_passed}</p>
-                  )}
                 </div>
               </div>
 
@@ -636,18 +568,13 @@ export default function StudentAddForm() {
                     <Input
                       placeholder="e.g. 2 years"
                       type="text"
-                      className={`${errors.experience ? 'border border-red-500' : ''}`}
                       value={formData.experience}
                       onChange={(e) =>
                         setFormData({ ...formData, experience: e.target.value })
                       }
                     />
+                    {errors.experience && <p className="text-red-500 text-sm">{errors.experience}</p>}
                   </div>
-
-                  {/* Error message */}
-                  {errors.experience && (
-                    <p className="text-red-500 text-sm mt-1">{errors.experience}</p>
-                  )}
                 </div>
               </div>
             </div>
@@ -666,7 +593,6 @@ export default function StudentAddForm() {
                       placeholder="e.g. ComputerScience"
                       type="text"
                       value={formData.department_stream}
-                      className={`${errors.department_stream ? 'border border-red-500' : ''}`}
                       onChange={(e) => {
                         const value = e.target.value;
                         if (/^[A-Za-z]*$/.test(value)) {
@@ -674,10 +600,8 @@ export default function StudentAddForm() {
                         }
                       }}
                     />
+                    {errors.department_stream && <p className="text-red-500 text-sm">{errors.department_stream}</p>}
                   </div>
-                  {errors.department_stream && (
-                    <p className="text-red-500 text-sm mt-1">{errors.department_stream}</p>
-                  )}
                 </div>
               </div>
 
@@ -689,16 +613,13 @@ export default function StudentAddForm() {
                     <Input
                       placeholder="e.g. 12"
                       type="text"
-                      className={`${errors.course_duration ? 'border border-red-500' : ''}`}
                       value={formData.course_duration}
                       onChange={(e) => {
                         const numbersOnly = e.target.value.replace(/[^0-9]/g, '');
                         setFormData({ ...formData, course_duration: numbersOnly });
                       }}
                     />
-                    {errors.course_duration && (
-                      <p className="text-red-500 text-sm mt-1">{errors.course_duration}</p>
-                    )}
+                    {errors.course_duration && <p className="text-red-500 text-sm">{errors.course_duration}</p>}
                   </div>
                 </div>
               </div>
@@ -727,13 +648,10 @@ export default function StudentAddForm() {
                         ...prev,
                         join_date: formattedDate,
                       }));
-                      setErrors((prev) => ({ ...prev, join_date: "" })); // clear error
                     }
                   }}
                 />
-                {errors.join_date && (
-                  <p className="text-red-500 text-sm">{errors.join_date}</p>
-                )}
+                {errors.join_date && <p className="text-red-500 text-sm">{errors.join_date}</p>}
               </div>
 
 
@@ -761,13 +679,10 @@ export default function StudentAddForm() {
                         ...prev,
                         end_date: formattedDate,
                       }));
-                      setErrors((prev) => ({ ...prev, end_date: "" })); // clear error
                     }
                   }}
                 />
-                {errors.end_date && (
-                  <p className="text-red-500 text-sm">{errors.end_date}</p>
-                )}
+                {errors.end_date && <p className="text-red-500 text-sm">{errors.end_date}</p>}
               </div>
 
 
@@ -786,9 +701,7 @@ export default function StudentAddForm() {
                       setFormData({ ...formData, course_enrolled: value })
                     }
                   />
-                  {errors.course_enrolled && (
-                    <p className="text-red-500 text-sm mt-1">{errors.course_enrolled}</p>
-                  )}
+                  {errors.course_enrolled && <p className="text-red-500 text-sm">{errors.course_enrolled}</p>}
                 </div>
               </div>
 
@@ -798,7 +711,6 @@ export default function StudentAddForm() {
                 <Label>Batch</Label>
                 <div className="relative">
                   <Input
-                    className={`${errors.course_duration ? 'border border-red-500' : ''}`}
                     placeholder="e.g. A"
                     type="text"
                     value={formData.batch}
@@ -809,9 +721,7 @@ export default function StudentAddForm() {
                       }
                     }}
                   />
-                  {errors.batch && (
-                    <p className="text-red-500 text-sm mt-1">{errors.batch}</p>
-                  )}
+                  {errors.batch && <p className="text-red-500 text-sm">{errors.batch}</p>}
                 </div>
               </div>
 
@@ -825,9 +735,7 @@ export default function StudentAddForm() {
                     value={formData.tutor}
                     onSelect={(value) => setFormData({ ...formData, tutor: value })}
                   />
-                  {errors.tutor && (
-                    <p className="text-red-500 text-sm mt-1">{errors.tutor}</p>
-                  )}
+                  {errors.tutor && <p className="text-red-500 text-sm">{errors.tutor}</p>}
                 </div>
               </div>
 
@@ -840,39 +748,47 @@ export default function StudentAddForm() {
             </h3>
 
 
-            {/* UPLOAD IMAGE  */}
+            {/* UPLOAD IMAGE */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               <div className="space-y-6">
-                <Label> Pan Card</Label>
-                <FileUploadBox onFileSelect={(file) => setDocuments(prev => ({ ...prev, pan_card: file }))} />
-                {errors.pan_card && (
-                  <p className="text-red-500 text-sm mt-1">{errors.pan_card}</p>
-                )}
+                <Label>Pan Card</Label>
+                <FileUploadBox
+                  onFileSelect={(file) => setDocuments(prev => ({ ...prev, pan_card: file }))}
+                  error={errors.pan_card}
+                  required={true}
+                />
               </div>
+
               <div className="space-y-6">
                 <Label>Aadhar Card</Label>
-                <FileUploadBox onFileSelect={(file) => setDocuments(prev => ({ ...prev, aadhar_card: file }))} />
-                {errors.aadhar_card && (
-                  <p className="text-red-500 text-sm mt-1">{errors.aadhar_card}</p>
-                )}
+                <FileUploadBox
+                  onFileSelect={(file) => setDocuments(prev => ({ ...prev, aadhar_card: file }))}
+                  error={errors.aadhar_card}
+                  required={true}
+                />
               </div>
             </div>
+
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               <div className="space-y-6">
-                <Label> SSLC Marksheet</Label>
-                <FileUploadBox onFileSelect={(file) => setDocuments(prev => ({ ...prev, sslc_marksheet: file }))} />
-                {errors.sslc_marksheet && (
-                  <p className="text-red-500 text-sm mt-1">{errors.sslc_marksheet}</p>
-                )}
+                <Label>SSLC Marksheet</Label>
+                <FileUploadBox
+                  onFileSelect={(file) => setDocuments(prev => ({ ...prev, sslc_marksheet: file }))}
+                  error={errors.sslc_marksheet}
+                  required={true}
+                />
               </div>
+
               <div className="space-y-6">
-                <Label> Passport Size Photo</Label>
-                <FileUploadBox onFileSelect={(file) => setDocuments(prev => ({ ...prev, passport_photo: file }))} />
-                {errors.passport_photo && (
-                  <p className="text-red-500 text-sm mt-1">{errors.passport_photo}</p>
-                )}
+                <Label>Passport Size Photo</Label>
+                <FileUploadBox
+                  onFileSelect={(file) => setDocuments(prev => ({ ...prev, passport_photo: file }))}
+                  error={errors.passport_photo}
+                  required={true}
+                />
               </div>
             </div>
+
 
             {/* BTN  */}
             <div className="grid xl:grid-cols-2 gap-6">
@@ -967,101 +883,112 @@ function CustomDropdown<T extends string>({
   );
 }
 
-
-import { useCallback } from "react";
-import { Trash2 } from "lucide-react";
-
-function FileUploadBox({ onFileSelect }: { onFileSelect: (file: File | null) => void }) {
+function FileUploadBox({
+  onFileSelect,
+  error,
+  required = false,
+  submitted = false, // new prop
+}: {
+  onFileSelect: (file: File | null) => void;
+  error?: string;
+  required?: boolean;
+  submitted?: boolean;
+}) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [localError, setLocalError] = useState<string>("");
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
+
       const file = acceptedFiles[0];
+      const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+      if (!allowedTypes.includes(file.type)) {
+        setLocalError("Only JPEG or PNG images are allowed.");
+        setSelectedFile(null);
+        onFileSelect(null);
+        return;
+      }
+
+      const maxSize = 2 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setLocalError("File size must be less than 2MB.");
+        setSelectedFile(null);
+        onFileSelect(null);
+        return;
+      }
+
       setSelectedFile(file);
-      onFileSelect(file); // Pass file to parent
-    }
-  }, []);
+      setLocalError("");
+      onFileSelect(file);
+    },
+    [onFileSelect]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: false,
+    accept: { "image/*": [".jpeg", ".jpg", ".png"] },
   });
 
   const handleDelete = () => {
     setSelectedFile(null);
-    onFileSelect(null); // Clear in parent
+    onFileSelect(null);
   };
 
-  // Render uploaded file preview card
-  if (selectedFile) {
-    const fileSizeMB = (selectedFile.size / (1024 * 1024)).toFixed(1);
+  // ✅ Only show required error if submitted and no file selected
+  useEffect(() => {
+    if (required && submitted && !selectedFile) {
+      setLocalError("This field is required.");
+    } else if (!selectedFile) {
+      setLocalError("");
+    }
+  }, [submitted, selectedFile, required]);
 
-
-    return (
-      <div className="bg-white flex justify-between items-center px-4 py-3 rounded-xl shadow border h-[176px]">
-        <div className="flex items-center gap-4">
-          {/* File icon */}
-          <div className="">
-            <img
-              src={Uploadafter}
-              alt="Preview"
-              className="h-12 w-12 object-contain"
-            />
-          </div>
-          {/* File name and size */}
-          <div>
-            <p className="text-sm font-medium">{selectedFile.name}</p>
-            <p className="text-xs text-gray-500">{fileSizeMB} MB</p>
-          </div>
-        </div>
-
-        {/* Delete button */}
-        <button
-          onClick={handleDelete}
-          className="text-gray-500 hover:text-red-500 transition"
-        >
-          <Trash2 size={18} />
-        </button>
-      </div>
-    );
-  }
-
-  // Render upload dropzone
   return (
-    <div className="transition border border-gray-300 border-dashed cursor-pointer dark:hover:border-brand-500 dark:border-gray-700 rounded-xl hover:border-brand-500 h-[176px]">
-      <form
-        {...getRootProps()}
-        className={`dropzone h-full rounded-xl border-dashed border-gray-300 p-7 lg:p-10
-      ${isDragActive
-            ? "border-brand-500 bg-gray-100 dark:bg-gray-800"
-            : "border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"}
-    `}
-        id="demo-upload"
-      >
-        <input {...getInputProps()} />
-        <div className="dz-message flex flex-row items-center m-0 gap-6 h-full">
-          {/* Icon Container */}
-          <div className="flex justify-center items-center shrink-0">
-            <div className="flex h-[68px] w-[68px] items-center justify-center rounded-full text-gray-700 dark:bg-gray-800 dark:text-gray-400">
-              <img src={Upload} alt="Upload Icon" className="h-12 w-12 object-contain" />
+    <div>
+      {selectedFile ? (
+        <div className="bg-white flex justify-between items-center px-4 py-3 rounded-xl shadow border h-[176px]">
+          <div className="flex items-center gap-4">
+            <img src={Uploadafter} alt="Preview" className="h-12 w-12 object-contain" />
+            <div>
+              <p className="text-sm font-medium">{selectedFile.name}</p>
+              <p className="text-xs text-gray-500">{(selectedFile.size / (1024 * 1024)).toFixed(1)} MB</p>
             </div>
           </div>
-
-          {/* Text Content */}
-          <div className="max-w-[400px] text-center">
-            <h4 className="mb-2 font-semibold text-gray-800 text-theme-xl dark:text-white/90">
-              {isDragActive ? "Drop Files or" : "Drag & Drop Files or"}{" "}
-              <span className="font-medium underline text-theme-sm text-brand-500">
-                Browse File
+          <button onClick={handleDelete} className="text-gray-500 hover:text-red-500 transition">
+            <Trash2 size={18} />
+          </button>
+        </div>
+      ) : (
+        <div
+          {...getRootProps()}
+          className={`transition border border-dashed rounded-xl cursor-pointer h-[176px] p-7 lg:p-10 
+          ${isDragActive ? "border-brand-500 bg-gray-100 dark:bg-gray-800" : "border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"}`}
+        >
+          <input {...getInputProps()} />
+          <div className="dz-message flex flex-row items-center m-0 gap-6 h-full">
+            <div className="flex justify-center items-center shrink-0">
+              <div className="flex h-[68px] w-[68px] items-center justify-center rounded-full text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                <img src={Upload} alt="Upload Icon" className="h-12 w-12 object-contain" />
+              </div>
+            </div>
+            <div className="max-w-[400px] text-center">
+              <h4 className="mb-2 font-semibold text-gray-800 text-theme-xl dark:text-white/90">
+                {isDragActive ? "Drop Files or" : "Drag & Drop Files or"}{" "}
+                <span className="font-medium underline text-theme-sm text-brand-500">Browse File</span>
+              </h4>
+              <span className="block text-sm text-gray-700 dark:text-gray-400">
+                Supported formats: JPEG, PNG (max 2MB)
               </span>
-            </h4>
-            <span className="block text-sm text-gray-700 dark:text-gray-400">
-              Supported formats: JPEG, PNG, GIF, MP4, PDF, PSD, AI, Word, PPT
-            </span>
+            </div>
           </div>
         </div>
-      </form>
-    </div>
+      )}
 
+      {(localError || error) && <p className="text-red-500 text-sm mt-1">{localError || error}</p>}
+    </div>
   );
 }
+
+
