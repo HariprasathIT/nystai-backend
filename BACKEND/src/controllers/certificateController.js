@@ -18,9 +18,9 @@ export const verifyCertificate = async (req, res) => {
 
     // Require exactly 2 fields
     if (filledFields.length !== 2) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Exactly 2 fields must be provided", 
+      return res.status(400).json({
+        success: false,
+        error: "Exactly 2 fields must be provided",
         hint: "Enter any 2 of Aadhar, Email, PAN, or Phone"
       });
     }
@@ -127,3 +127,139 @@ export const uploadCertificateForStudent = async (req, res) => {
     res.status(500).json({ success: false, error: "Server error", detail: err.message });
   }
 };
+
+// Get certificate for a student
+export const getCertificateForStudent = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    if (!studentId) {
+      return res.status(400).json({ success: false, error: "studentId is required" });
+    }
+
+    const result = await pool.query(
+      `SELECT certificate_id, certificate_url, certificate_status
+       FROM studentsuniqueqrcode
+       WHERE student_id = $1`,
+      [studentId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "No certificate found for this student"
+      });
+    }
+
+    const certificate = result.rows[0];
+
+    res.status(200).json({
+      success: true,
+      certificateId: certificate.certificate_id,
+      certificateUrl: certificate.certificate_url,
+      certificateStatus: certificate.certificate_status,
+    });
+  } catch (err) {
+    console.error("Error fetching certificate:", err);
+    res.status(500).json({ success: false, error: "Server error", detail: err.message });
+  }
+};
+
+
+// Update certificate for a student (only image, no status change)
+export const updateCertificateForStudent = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const file = req.file;
+
+    if (!studentId) {
+      return res.status(400).json({ success: false, error: "studentId is required in route" });
+    }
+    if (!file) {
+      return res.status(400).json({ success: false, error: "New certificate file is required" });
+    }
+
+    // ✅ Check if certificate exists for this student
+    const existing = await pool.query(
+      `SELECT certificate_id, certificate_status FROM studentsuniqueqrcode WHERE student_id = $1`,
+      [studentId]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "No existing certificate found for this student" });
+    }
+
+    const { certificate_id: certificateId, certificate_status: currentStatus } = existing.rows[0];
+
+    // Upload new certificate to Vercel Blob
+    const blob = await put(`certificates/${file.originalname}`, file.buffer, {
+      access: "public",
+      token: process.env.VERCEL_BLOB_RW_TOKEN,
+      addRandomSuffix: true,
+    });
+
+    const certificateUrl = blob.url;
+
+    // ✅ Only update the image, keep old status
+    await pool.query(
+      `UPDATE studentsuniqueqrcode
+       SET certificate_url = $1
+       WHERE student_id = $2`,
+      [certificateUrl, studentId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Certificate image updated successfully for student ID ${studentId}`,
+      certificateId,
+      certificateUrl,
+      certificateStatus: currentStatus // return unchanged status
+    });
+  } catch (err) {
+    console.error("Error updating certificate:", err);
+    res.status(500).json({ success: false, error: "Server error", detail: err.message });
+  }
+};
+
+
+// Delete only certificate image for a student (keep student_id & certificate_id)
+export const deleteCertificateImageForStudent = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    if (!studentId) {
+      return res.status(400).json({ success: false, error: "studentId is required" });
+    }
+
+    // ✅ Check if certificate exists
+    const existing = await pool.query(
+      `SELECT certificate_id, certificate_url, certificate_status 
+       FROM studentsuniqueqrcode 
+       WHERE student_id = $1`,
+      [studentId]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "No certificate found for this student" });
+    }
+
+    // ✅ Remove only image URL, keep certificateId intact
+    await pool.query(
+      `UPDATE studentsuniqueqrcode
+       SET certificate_url = NULL
+       WHERE student_id = $1`,
+      [studentId]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Certificate image removed for student ID ${studentId}`,
+      certificateId: existing.rows[0].certificate_id,
+      certificateStatus: existing.rows[0].certificate_status
+    });
+  } catch (err) {
+    console.error("Error deleting certificate image:", err);
+    res.status(500).json({ success: false, error: "Server error", detail: err.message });
+  }
+};
+
