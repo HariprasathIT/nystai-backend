@@ -84,6 +84,7 @@ const validatePincode = (pin: string) => {
 
 // ------------------ Main Form Component ------------------
 export default function StudentAddForm() {
+  
   const [formData, setFormData] = useState({
     name: "",
     last_name: "",

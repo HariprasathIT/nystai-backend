@@ -16,8 +16,9 @@ const generateAndUploadQR = async (studentRegisterNumber, studentId, certificate
     console.log(" Register Number:", studentRegisterNumber);
     console.log(" Certificate ID:", certificateId);
 
-    //  Create a verification link (frontend page)
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify?certificateId=${certificateId}`;
+
+    // Now always go to login page
+    const verificationUrl = `${process.env.FRONTEND_URL}/student/login`;
     console.log("🔗 Verification URL:", verificationUrl);
 
     //  Generate QR as PNG buffer
