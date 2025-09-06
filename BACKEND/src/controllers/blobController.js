@@ -2,7 +2,6 @@ import db from "../config/db.js";
 import { put } from '@vercel/blob';
 import asyncHandler from 'express-async-handler';
 import { generateStudentRegisterNumber } from '../utils/generateStudentID.js';
-import generateAndUploadQR from '../utils/generateAndUploadQR.js';
 import { generateCertificateId } from "../utils/generateCertificateId.js";
 
 
@@ -289,8 +288,8 @@ export const getStudentById = async (req, res) => {
 };
 
 
+// Update student with proof documents
 // This function updates a student's details along with their proof documents
-// It handles file uploads, updates personal information, course details, and generates a QR code and certificate ID if completed
 export const updateStudentWithProof = async (req, res) => {
     const client = await db.connect();
 
@@ -320,75 +319,87 @@ export const updateStudentWithProof = async (req, res) => {
             course_enrolled,
             batch,
             tutor,
-            certificate_status
+            certificate_status,
         } = req.body || {};
 
         const files = req.files;
 
         if (!req.body || Object.keys(req.body).length === 0) {
             return res.status(400).json({
-                error: 'No data provided for update',
-                hint: 'Make sure you are using form-data in Postman and have the correct multer middleware'
+                error: "No data provided for update",
+                hint: "Use form-data in Postman and apply multer middleware",
             });
         }
 
+        // ✅ Ensure student exists
         const studentCheck = await client.query(
-            'SELECT student_id FROM studentspersonalinformation WHERE student_id = $1',
+            "SELECT student_id FROM studentspersonalinformation WHERE student_id = $1",
             [student_id]
         );
 
         if (studentCheck.rows.length === 0) {
-            return res.status(404).json({ error: 'Student not found' });
+            return res.status(404).json({ error: "Student not found" });
         }
 
-        await client.query('BEGIN');
+        await client.query("BEGIN");
 
-        // Upload proof documents if provided
+        // 🔹 Upload proof docs if any
         const uploadedUrls = {};
-        const docFields = ['passport_photo', 'pan_card', 'aadhar_card', 'sslc_marksheet'];
+        const docFields = ["passport_photo", "pan_card", "aadhar_card", "sslc_marksheet"];
 
         if (files) {
             for (const field of docFields) {
                 if (files[field]) {
                     const file = files[field][0];
                     const blob = await put(`studentproofs/${file.originalname}`, file.buffer, {
-                        access: 'public',
+                        access: "public",
                         token: process.env.VERCEL_BLOB_RW_TOKEN,
-                        addRandomSuffix: true
+                        addRandomSuffix: true,
                     });
                     uploadedUrls[field] = blob.url;
                 }
             }
         }
 
-        // Update personal information
+        // 🔹 Update personal info
         await client.query(
             `UPDATE studentspersonalinformation 
-            SET name = $1, last_name = $2, dob = $3, gender = $4, email = $5, 
-                phone = $6, alt_phone = $7, aadhar_number = $8, pan_number = $9, 
-                address = $10, pincode = $11, state = $12, department = $13, 
-                course = $14, year_of_passed = $15, experience = $16
-            WHERE student_id = $17`,
+       SET name=$1, last_name=$2, dob=$3, gender=$4, email=$5, 
+           phone=$6, alt_phone=$7, aadhar_number=$8, pan_number=$9, 
+           address=$10, pincode=$11, state=$12, department=$13, 
+           course=$14, year_of_passed=$15, experience=$16
+       WHERE student_id=$17`,
             [
-                name, last_name, dob, gender, email, phone, alt_phone,
-                aadhar_number, pan_number, address, pincode, state,
-                department, course, year_of_passed, experience, student_id
+                name,
+                last_name,
+                dob,
+                gender,
+                email,
+                phone,
+                alt_phone,
+                aadhar_number,
+                pan_number,
+                address,
+                pincode,
+                state,
+                department,
+                course,
+                year_of_passed,
+                experience,
+                student_id,
             ]
         );
 
-        // Update course details
+        // 🔹 Update course details
         await client.query(
             `UPDATE studentcoursedetails 
-            SET department_stream = $1, course_duration = $2, join_date = $3, 
-                end_date = $4, course_enrolled = $5, batch = $6, tutor = $7
-            WHERE student_id = $8`,
-            [
-                department_stream, course_duration, join_date,
-                end_date, course_enrolled, batch, tutor, student_id
-            ]
+       SET department_stream=$1, course_duration=$2, join_date=$3, 
+           end_date=$4, course_enrolled=$5, batch=$6, tutor=$7
+       WHERE student_id=$8`,
+            [department_stream, course_duration, join_date, end_date, course_enrolled, batch, tutor, student_id]
         );
 
-        // Update proof documents if any new files uploaded
+        // 🔹 Update proof doc URLs
         if (Object.keys(uploadedUrls).length > 0) {
             const updateFields = [];
             const values = [];
@@ -404,53 +415,34 @@ export const updateStudentWithProof = async (req, res) => {
 
             await client.query(
                 `UPDATE student_proof_documents 
-                SET ${updateFields.join(', ')}
-                WHERE student_id = $${paramCount}`,
+         SET ${updateFields.join(", ")} 
+         WHERE student_id = $${paramCount}`,
                 values
             );
         }
 
-        // 🔹 Generate certificate + QR if status is completed
+        // 🔹 Handle certificate (but no QR now!)
         if (certificate_status === "completed") {
-
-            // 1️⃣ Get student register number from DB
-            const regResult = await client.query(
-                `SELECT studentregisternumber FROM studentcoursedetails WHERE student_id = $1`,
-                [student_id]
-            );
-
-            if (regResult.rows.length === 0 || !regResult.rows[0].studentregisternumber) {
-                throw new Error("Student register number not found");
-            }
-
-            const studentRegisterNumber = regResult.rows[0].studentregisternumber;
-
-            // 2️⃣ Generate certificateId
             const certificateId = await generateCertificateId();
 
-            // 3️⃣ Generate QR
-            const qrUrl = await generateAndUploadQR(studentRegisterNumber, student_id, certificateId);
-
-            // 4️⃣ Save in DB
             await client.query(
                 `UPDATE studentsuniqueqrcode 
-         SET certificate_status=$1, student_qr_url=$2, certificate_id=$3 
-         WHERE student_id=$4`,
-                ["completed", qrUrl, certificateId, student_id]
+         SET certificate_status=$1, certificate_id=$2 
+         WHERE student_id=$3`,
+                ["completed", certificateId, student_id]
             );
         }
 
+        await client.query("COMMIT");
 
-        await client.query('COMMIT');
-
-        // Fetch updated student details
+        // 🔹 Return updated student info
         const updated = await client.query(
             `SELECT spi.*, scd.*, spd.*, suq.*
-             FROM studentspersonalinformation spi
-             LEFT JOIN studentcoursedetails scd ON spi.student_id = scd.student_id
-             LEFT JOIN student_proof_documents spd ON spi.student_id = spd.student_id
-             LEFT JOIN studentsuniqueqrcode suq ON spi.student_id = suq.student_id
-             WHERE spi.student_id = $1`,
+       FROM studentspersonalinformation spi
+       LEFT JOIN studentcoursedetails scd ON spi.student_id = scd.student_id
+       LEFT JOIN student_proof_documents spd ON spi.student_id = spd.student_id
+       LEFT JOIN studentsuniqueqrcode suq ON spi.student_id = suq.student_id
+       WHERE spi.student_id = $1`,
             [student_id]
         );
 
@@ -458,22 +450,22 @@ export const updateStudentWithProof = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: 'Student updated successfully',
-            data: filteredData
+            message: "Student updated successfully",
+            data: filteredData,
         });
-
     } catch (error) {
-        await client.query('ROLLBACK');
-        console.error(error);
+        await client.query("ROLLBACK");
+        console.error("Update Error:", error);
         res.status(500).json({
             success: false,
-            error: 'Update failed',
-            detail: error.message
+            error: "Update failed",
+            detail: error.message,
         });
     } finally {
         client.release();
     }
 };
+
 
 
 

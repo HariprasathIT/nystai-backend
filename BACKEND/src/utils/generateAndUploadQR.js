@@ -21,11 +21,11 @@ const generateAndUploadQR = async (studentRegisterNumber, studentId, certificate
     const verificationUrl = `${process.env.FRONTEND_URL}/student/login`;
     console.log("🔗 Verification URL:", verificationUrl);
 
-    //  Generate QR as PNG buffer
-    const qrBuffer = await QRCode.toBuffer(verificationUrl, { type: "png" });
+    // Generate QR code PNG buffer
+    const qrBuffer = await QRCode.toBuffer(loginUrl, { type: "png" });
 
-    //  Upload to Vercel Blob
-    const blob = await put(`studentqrs/${studentId}-${certificateId}.png`, qrBuffer, {
+    // Upload to Vercel Blob (always overwrite same file)
+    const blob = await put(`studentqrs/fixed-login.png`, qrBuffer, {
       access: "public",
       token: process.env.VERCEL_BLOB_RW_TOKEN,
       allowOverwrite: true,
