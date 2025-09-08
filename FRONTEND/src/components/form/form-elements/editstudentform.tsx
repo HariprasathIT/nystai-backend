@@ -270,6 +270,27 @@ export default function StudentEditForm() {
     fetchCourses();
   }, []);
 
+  const [tutors, setTutors] = useState<{ tutor_id: number; first_name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchTutors = async () => {
+      try {
+        const response = await fetch("https://nystai-backend.onrender.com/NystaiTutors/getalltutors");
+        const result = await response.json();
+        if (result.success) {
+          setTutors(result.tutors);  // store tutors in state
+        } else {
+          console.error("Failed to fetch tutors");
+        }
+      } catch (err) {
+        console.error("Error fetching tutors:", err);
+      }
+    };
+
+    fetchTutors();
+  }, []);
+
+
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
@@ -551,7 +572,10 @@ export default function StudentEditForm() {
               <div>
                 <Label>Year Of Passed</Label>
                 <div className="relative">
-                  <Input placeholder="e.g. 2022" type="text" className=""
+                  <Input placeholder="e.g. 2022"
+                    type="text"
+                    className=""
+                    maxLength={4} // restricts to 4 digits
                     value={formData.year_of_passed}
                     onChange={(e) => setFormData({ ...formData, year_of_passed: e.target.value })} />
                   {errors.year_of_passed && <p className="text-red-500 text-sm">{errors.year_of_passed}</p>}
@@ -564,11 +588,14 @@ export default function StudentEditForm() {
               <div>
                 <Label>Experience</Label>
                 <div className="relative">
-                  <Input placeholder="e.g. 2 years" type="text" className=""
+                  <Input placeholder="e.g. 2 years"
+                    type="text"
+                    className=""
+                    maxLength={2} // restricts to 2 digits
                     value={formData.experience}
                     onChange={(e) => {
                       const numbersOnly = e.target.value.replace(/[^0-9]/g, '');
-                      setFormData({ ...formData, year_of_passed: numbersOnly });
+                      setFormData({ ...formData, experience: numbersOnly });
                     }} />
                   {errors.experience && <p className="text-red-500 text-sm">{errors.experience}</p>}
                 </div>
@@ -731,14 +758,17 @@ export default function StudentEditForm() {
                 <Label>Tutor</Label>
                 <div className="relative">
                   <CustomDropdown
-                    options={["Mohamed Yusuf Deen", "Sivaguru", "Others"]}
-                    selected={formData.tutor as "Mohamed Yusuf Deen" | "Sivaguru" | "Others"}
+                    options={tutors.map((tutor) => tutor.first_name)}  // dynamically mapped
+                    selected={formData.tutor}
                     onSelect={(value) => setFormData({ ...formData, tutor: value })}
                   />
-                  {errors.tutor && <p className="text-red-500 text-sm">{errors.tutor}</p>}
+                  {errors.tutor && (
+                    <p className="text-red-500 text-sm">{errors.tutor}</p>
+                  )}
                 </div>
               </div>
             </div>
+
           </div>
 
           {/* <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">

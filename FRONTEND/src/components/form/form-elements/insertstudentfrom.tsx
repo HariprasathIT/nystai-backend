@@ -10,7 +10,6 @@ import Uploadafter from "../../../icons/OIP.webp";
 import { toast } from "react-hot-toast";
 import { Trash2 } from "lucide-react";
 
-// ------------------ Helper Functions for Validation ------------------
 const validateEmail = (email: string) => {
   if (!email) return "Email is required";
   const regex = /^[^\s@]+@[^\s@]+\.(com|org)$/;
@@ -82,9 +81,8 @@ const validatePincode = (pin: string) => {
   return "";
 };
 
-// ------------------ Main Form Component ------------------
 export default function StudentAddForm() {
-  
+
   const [formData, setFormData] = useState({
     name: "",
     last_name: "",
@@ -225,6 +223,29 @@ export default function StudentAddForm() {
     };
 
     fetchCourses();
+  }, []);
+
+  // State for tutors
+  const [tutors, setTutors] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchTutors = async () => {
+      try {
+        const response = await fetch("https://nystai-backend.onrender.com/NystaiTutors/getalltutors");
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.tutors)) {
+          // ✅ extract only first_name
+          setTutors(result.tutors.map((t: any) => t.first_name));
+        } else {
+          console.error("Failed to fetch tutors");
+        }
+      } catch (err) {
+        console.error("Error fetching tutors:", err);
+      }
+    };
+
+    fetchTutors();
   }, []);
 
 
@@ -551,6 +572,7 @@ export default function StudentAddForm() {
                       placeholder="e.g. 2022"
                       type="text"
                       value={formData.year_of_passed}
+                      maxLength={4} // restricts to 4 digits
                       onChange={(e) => {
                         const numbersOnly = e.target.value.replace(/[^0-9]/g, '');
                         setFormData({ ...formData, year_of_passed: numbersOnly });
@@ -570,6 +592,7 @@ export default function StudentAddForm() {
                       placeholder="e.g. 2 years"
                       type="text"
                       value={formData.experience}
+                      maxLength={2} // restricts to 2 digits
                       onChange={(e) =>
                         setFormData({ ...formData, experience: e.target.value })
                       }
@@ -732,15 +755,13 @@ export default function StudentAddForm() {
                 <Label>Tutor</Label>
                 <div className="relative">
                   <CustomDropdown
-                    options={["Mohamed Yusuf Deen", "Sivaguru", "Others"]}
+                    options={tutors} // ✅ now comes from API
                     value={formData.tutor}
                     onSelect={(value) => setFormData({ ...formData, tutor: value })}
                   />
                   {errors.tutor && <p className="text-red-500 text-sm">{errors.tutor}</p>}
                 </div>
               </div>
-
-
             </div>
 
             {/* Heading design */}
