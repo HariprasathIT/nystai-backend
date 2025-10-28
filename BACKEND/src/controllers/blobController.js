@@ -33,7 +33,8 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
             end_date,
             course_enrolled,
             batch,
-            tutor
+            tutor,
+            course_price // ✅ added new field
         } = req.body;
 
         const files = req.files;
@@ -76,9 +77,9 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
         //  Insert into studentspersonalinformation
         const personalResult = await client.query(
             `INSERT INTO studentspersonalinformation 
-      (name, last_name, dob, gender, email, phone, alt_phone, aadhar_number, pan_number, address, pincode, state, department, course, year_of_passed, experience)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-      RETURNING student_id`,
+            (name, last_name, dob, gender, email, phone, alt_phone, aadhar_number, pan_number, address, pincode, state, department, course, year_of_passed, experience)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+            RETURNING student_id`,
             [
                 name,
                 last_name,
@@ -104,11 +105,11 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
         //  Generate register number
         const studentRegisterNumber = await generateStudentRegisterNumber(course_enrolled, client);
 
-        //  Insert into studentcoursedetails
+        //  ✅ Insert into studentcoursedetails (added course_price)
         await client.query(
             `INSERT INTO studentcoursedetails 
-      (student_id, department_stream, course_duration, join_date, end_date, course_enrolled, batch, tutor, studentregisternumber)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+            (student_id, department_stream, course_duration, join_date, end_date, course_enrolled, batch, tutor, studentregisternumber, courseprice)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
             [
                 studentId,
                 department_stream,
@@ -118,15 +119,16 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
                 course_enrolled,
                 batch,
                 tutor,
-                studentRegisterNumber
+                studentRegisterNumber,
+                course_price // ✅ added here
             ]
         );
 
         //  Insert into student_proof_documents
         await client.query(
             `INSERT INTO student_proof_documents 
-      (student_id, passport_photo_url, pan_card_url, aadhar_card_url, sslc_marksheet_url)
-      VALUES ($1, $2, $3, $4, $5)`,
+            (student_id, passport_photo_url, pan_card_url, aadhar_card_url, sslc_marksheet_url)
+            VALUES ($1, $2, $3, $4, $5)`,
             [
                 studentId,
                 uploadedUrls.passport_photo,
@@ -156,12 +158,14 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
         console.error(error);
         res.status(500).json({
             success: false,
-            error: 'Insert failed', detail: error.message
+            error: 'Insert failed',
+            detail: error.message
         });
     } finally {
         client.release();
     }
 });
+
 
 // Get all students with their details
 // This function retrieves all students along with their personal information, course details, proof documents, and
@@ -178,6 +182,7 @@ export const getAllStudents = async (req, res, next) => {
     scd.batch,
     scd.tutor,
     scd.studentregisternumber,
+    scd.course_price,
     spd.passport_photo_url,
     spd.pan_card_url,
     spd.aadhar_card_url,
@@ -200,6 +205,7 @@ export const getAllStudents = async (req, res, next) => {
         next(err);
     }
 };
+
 
 // Delete student by ID
 // This function deletes a student from the database by their ID
@@ -236,6 +242,7 @@ export const deleteStudent = async (req, res) => {
         client.release();
     }
 };
+
 
 // Get student by ID
 // This function retrieves a student's details by their ID, including personal information, course details, proof
@@ -320,6 +327,7 @@ export const updateStudentWithProof = async (req, res) => {
             batch,
             tutor,
             certificate_status,
+            course_price
         } = req.body || {};
 
         const files = req.files;
@@ -393,10 +401,10 @@ export const updateStudentWithProof = async (req, res) => {
         // 🔹 Update course details
         await client.query(
             `UPDATE studentcoursedetails 
-       SET department_stream=$1, course_duration=$2, join_date=$3, 
-           end_date=$4, course_enrolled=$5, batch=$6, tutor=$7
-       WHERE student_id=$8`,
-            [department_stream, course_duration, join_date, end_date, course_enrolled, batch, tutor, student_id]
+     SET department_stream=$1, course_duration=$2, join_date=$3, 
+         end_date=$4, course_enrolled=$5, batch=$6, tutor=$7, course_price=$8
+     WHERE student_id=$9`,
+            [department_stream, course_duration, join_date, end_date, course_enrolled, batch, tutor, course_price, student_id]
         );
 
         // 🔹 Update proof doc URLs
@@ -465,8 +473,6 @@ export const updateStudentWithProof = async (req, res) => {
         client.release();
     }
 };
-
-
 
 
 // Get total students count
