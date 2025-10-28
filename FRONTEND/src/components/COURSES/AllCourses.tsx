@@ -121,24 +121,6 @@ export default function AllCourses() {
                                             onChange={(e) => setCourseName(e.target.value)}
                                         />
                                     </div>
-                                    <div>
-                                        <Label className="mb-3">Course Duration</Label>
-                                        <Input
-                                            type="text"
-                                            placeholder="7 Days"
-                                            value={duration}
-                                            onChange={(e) => setDuration(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="lg:col-span-2">
-                                        <Label className="mb-3">Course Overview</Label>
-                                        <textarea
-                                            placeholder="Course Overview"
-                                            className="w-full border rounded-2xl border-gray-300 px-3 py-2 h-[100px] resize-none text-sm text-gray-700"
-                                            value={overview}
-                                            onChange={(e) => setOverview(e.target.value)}
-                                        />
-                                    </div>
                                     <div className="lg:col-span-2">
                                         <Label className="mb-3">Upload Image</Label>
                                         <FileUploadBox selectedFile={selectedFile} setSelectedFile={setSelectedFile} />
