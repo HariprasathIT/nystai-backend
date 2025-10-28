@@ -108,7 +108,7 @@ export const insertStudentWithProof = asyncHandler(async (req, res) => {
         //  ✅ Insert into studentcoursedetails (added course_price)
         await client.query(
             `INSERT INTO studentcoursedetails 
-            (student_id, department_stream, course_duration, join_date, end_date, course_enrolled, batch, tutor, studentregisternumber, courseprice)
+            (student_id, department_stream, course_duration, join_date, end_date, course_enrolled, batch, tutor, studentregisternumber, course_price)
             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
             [
                 studentId,
