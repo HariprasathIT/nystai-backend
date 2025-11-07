@@ -58,20 +58,20 @@ export const tutorUpdateValidator = [
 
     body("joining_date").bail()
         .notEmpty().withMessage("Joining date is required")
-        .custom((value) => {
-            const inputDate = new Date(value);
-            const today = new Date();
+        // .custom((value) => {
+        //     const inputDate = new Date(value);
+        //     const today = new Date();
 
-            // Remove time to compare only date
-            inputDate.setHours(0, 0, 0, 0);
-            today.setHours(0, 0, 0, 0);
+        //     // Remove time to compare only date
+        //     inputDate.setHours(0, 0, 0, 0);
+        //     today.setHours(0, 0, 0, 0);
 
-            if (inputDate.getTime() !== today.getTime()) {
-                throw new Error("Joining date must be today");
-            }
+        //     if (inputDate.getTime() !== today.getTime()) {
+        //         throw new Error("Joining date must be today");
+        //     }
 
-            return true;
-        })
+        //     return true;
+        // })
 
 ];
 
